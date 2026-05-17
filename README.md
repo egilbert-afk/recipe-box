@@ -201,7 +201,7 @@ GMAIL_APP_PASSWORD=
 ## Getting started
 
 ```bash
-git clone https://github.com/yourusername/recipe-box.git
+git clone https://github.com/egilbert-afk/recipe-box.git
 cd recipe-box
 npm install
 cp .env.example .env.local
@@ -216,7 +216,8 @@ npm run dev
 
 | Issue | Layer | Notes |
 |-------|-------|-------|
-| — | — | Populated during development |
+| `updated_at` never updates after insert — needs a Postgres trigger | 1 | Without a trigger function, `updated_at` always equals `created_at`. Fix when app code lands in Layer 1. |
+| Missing indexes on `ingredients.recipe_id` and `steps.recipe_id` | 1 | Postgres will do full table scans on these FK columns until indexed. Add before Layer 2. |
 
 ---
 
