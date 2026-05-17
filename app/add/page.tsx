@@ -182,6 +182,7 @@ export default function AddRecipePage() {
             className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base"
             required
           />
+          <p className="text-sm text-gray-500">If the recipe says a range (e.g. 3–4), enter the larger number.</p>
         </div>
 
         {/* Source URL */}
@@ -200,7 +201,10 @@ export default function AddRecipePage() {
 
         {/* Ingredients */}
         <div className="space-y-3">
-          <h2 className="text-sm font-medium text-gray-700">Ingredients</h2>
+          <div>
+            <h2 className="text-sm font-medium text-gray-700">Ingredients</h2>
+            <p className="text-sm text-gray-500">Add one ingredient per row.</p>
+          </div>
           {ingredients.map((ing, i) => (
             <div key={ing.id} className="flex gap-2 items-start">
               <div className="flex-1 space-y-2">
@@ -253,7 +257,10 @@ export default function AddRecipePage() {
 
         {/* Steps */}
         <div className="space-y-3">
-          <h2 className="text-sm font-medium text-gray-700">Steps</h2>
+          <div>
+            <h2 className="text-sm font-medium text-gray-700">Steps</h2>
+            <p className="text-sm text-gray-500">Add one step per box, in order.</p>
+          </div>
           {steps.map((step, i) => (
             <div key={step.id} className="flex gap-2 items-start">
               <span className="flex-shrink-0 flex items-center justify-center h-12 w-8 text-sm font-medium text-gray-500">
