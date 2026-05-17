@@ -218,6 +218,8 @@ npm run dev
 |-------|-------|-------|
 | `updated_at` never updates after insert — needs a Postgres trigger | 1 | Without a trigger function, `updated_at` always equals `created_at`. Fix when app code lands in Layer 1. |
 | Missing indexes on `ingredients.recipe_id` and `steps.recipe_id` | 1 | Postgres will do full table scans on these FK columns until indexed. Add before Layer 2. |
+| `source_url` not validated server-side | 2 | API accepts any string; only the browser enforces `type="url"`. Add URL validation in the API route. |
+| No max-length validation on text inputs | 2 | Title, ingredient names, and step instructions are unbounded. Add limits before Layer 2. |
 
 ---
 

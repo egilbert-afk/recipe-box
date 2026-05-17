@@ -2,34 +2,18 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { CUISINES, MEAL_TYPES } from '@/lib/constants'
 import type { CuisineId, MealTypeId, CreateRecipeInput } from '@/lib/types'
 
-const CUISINES: { id: CuisineId; label: string }[] = [
-  { id: 'american', label: 'American / Comfort Food' },
-  { id: 'italian', label: 'Italian' },
-  { id: 'mexican', label: 'Mexican' },
-  { id: 'mediterranean', label: 'Mediterranean' },
-  { id: 'asian', label: 'Asian' },
-  { id: 'french', label: 'French' },
-  { id: 'indian', label: 'Indian' },
-  { id: 'other', label: 'Other' },
-]
-
-const MEAL_TYPES: { id: MealTypeId; label: string }[] = [
-  { id: 'breakfast', label: 'Breakfast' },
-  { id: 'entree', label: 'Entrée' },
-  { id: 'side', label: 'Side' },
-  { id: 'dessert', label: 'Dessert' },
-  { id: 'cocktail', label: 'Cocktail' },
-]
-
 interface IngredientRow {
+  id: number
   name: string
   amount: string
   unit: string
 }
 
 interface StepRow {
+  id: number
   instruction: string
 }
 
@@ -41,10 +25,11 @@ export default function AddRecipePage() {
   const [mealTypeId, setMealTypeId] = useState<MealTypeId | ''>('')
   const [servings, setServings] = useState('4')
   const [sourceUrl, setSourceUrl] = useState('')
+  const [nextId, setNextId] = useState(2)
   const [ingredients, setIngredients] = useState<IngredientRow[]>([
-    { name: '', amount: '', unit: '' },
+    { id: 0, name: '', amount: '', unit: '' },
   ])
-  const [steps, setSteps] = useState<StepRow[]>([{ instruction: '' }])
+  const [steps, setSteps] = useState<StepRow[]>([{ id: 1, instruction: '' }])
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -53,7 +38,8 @@ export default function AddRecipePage() {
   }
 
   function addIngredient() {
-    setIngredients((prev) => [...prev, { name: '', amount: '', unit: '' }])
+    setIngredients((prev) => [...prev, { id: nextId, name: '', amount: '', unit: '' }])
+    setNextId((n) => n + 1)
   }
 
   function removeIngredient(index: number) {
@@ -61,11 +47,12 @@ export default function AddRecipePage() {
   }
 
   function updateStep(index: number, value: string) {
-    setSteps((prev) => prev.map((s, i) => (i === index ? { instruction: value } : s)))
+    setSteps((prev) => prev.map((s, i) => (i === index ? { ...s, instruction: value } : s)))
   }
 
   function addStep() {
-    setSteps((prev) => [...prev, { instruction: '' }])
+    setSteps((prev) => [...prev, { id: nextId, instruction: '' }])
+    setNextId((n) => n + 1)
   }
 
   function removeStep(index: number) {
@@ -102,21 +89,24 @@ export default function AddRecipePage() {
 
     setSubmitting(true)
 
-    const res = await fetch('/api/recipes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+    try {
+      const res = await fetch('/api/recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
 
-    const data = await res.json()
-    setSubmitting(false)
+      const data = await res.json()
 
-    if (!res.ok) {
-      setError(data.error ?? 'Something went wrong.')
-      return
+      if (!res.ok) {
+        setError(data.error ?? 'Something went wrong.')
+        return
+      }
+
+      router.push(`/recipes/${data.id}`)
+    } finally {
+      setSubmitting(false)
     }
-
-    router.push(`/recipes/${data.id}`)
   }
 
   return (
@@ -212,7 +202,7 @@ export default function AddRecipePage() {
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-gray-700">Ingredients</h2>
           {ingredients.map((ing, i) => (
-            <div key={i} className="flex gap-2 items-start">
+            <div key={ing.id} className="flex gap-2 items-start">
               <div className="flex-1 space-y-2">
                 <input
                   type="text"
@@ -265,7 +255,7 @@ export default function AddRecipePage() {
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-gray-700">Steps</h2>
           {steps.map((step, i) => (
-            <div key={i} className="flex gap-2 items-start">
+            <div key={step.id} className="flex gap-2 items-start">
               <span className="flex-shrink-0 flex items-center justify-center h-12 w-8 text-sm font-medium text-gray-500">
                 {i + 1}
               </span>

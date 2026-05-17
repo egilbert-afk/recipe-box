@@ -1,27 +1,9 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
 import type { RecipeWithDetails } from '@/lib/types'
 import { formatIngredient } from '@/lib/formatters'
-
-const CUISINE_LABELS: Record<string, string> = {
-  american: 'American / Comfort Food',
-  italian: 'Italian',
-  mexican: 'Mexican',
-  mediterranean: 'Mediterranean',
-  asian: 'Asian',
-  french: 'French',
-  indian: 'Indian',
-  other: 'Other',
-}
-
-const MEAL_TYPE_LABELS: Record<string, string> = {
-  breakfast: 'Breakfast',
-  entree: 'Entrée',
-  side: 'Side',
-  dessert: 'Dessert',
-  cocktail: 'Cocktail',
-}
 
 export default async function RecipePage({
   params,
@@ -63,10 +45,10 @@ export default async function RecipePage({
       <main className="px-4 py-6 space-y-8">
         <div className="flex gap-2 flex-wrap">
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700">
-            {CUISINE_LABELS[full.cuisine_id]}
+            {CUISINE_LABEL[full.cuisine_id]}
           </span>
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700">
-            {MEAL_TYPE_LABELS[full.meal_type_id]}
+            {MEAL_TYPE_LABEL[full.meal_type_id]}
           </span>
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700">
             Serves {full.servings}

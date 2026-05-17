@@ -1,27 +1,9 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
 import type { Recipe } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
-
-const CUISINE_LABELS: Record<string, string> = {
-  american: 'American / Comfort Food',
-  italian: 'Italian',
-  mexican: 'Mexican',
-  mediterranean: 'Mediterranean',
-  asian: 'Asian',
-  french: 'French',
-  indian: 'Indian',
-  other: 'Other',
-}
-
-const MEAL_TYPE_LABELS: Record<string, string> = {
-  breakfast: 'Breakfast',
-  entree: 'Entrée',
-  side: 'Side',
-  dessert: 'Dessert',
-  cocktail: 'Cocktail',
-}
 
 export default async function RecipesPage() {
   const { data: recipes, error } = await supabase
@@ -64,7 +46,7 @@ export default async function RecipesPage() {
                 <Link href={`/recipes/${recipe.id}`} className="flex flex-col py-4 gap-1">
                   <span className="text-base font-medium text-gray-900">{recipe.title}</span>
                   <span className="text-sm text-gray-500">
-                    {CUISINE_LABELS[recipe.cuisine_id]} · {MEAL_TYPE_LABELS[recipe.meal_type_id]} · Serves {recipe.servings}
+                    {CUISINE_LABEL[recipe.cuisine_id]} · {MEAL_TYPE_LABEL[recipe.meal_type_id]} · Serves {recipe.servings}
                   </span>
                 </Link>
               </li>
