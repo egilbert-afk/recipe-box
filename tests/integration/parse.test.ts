@@ -51,6 +51,12 @@ describe('POST /api/parse — validation', () => {
     expect(await res.json()).toMatchObject({ error: 'Invalid URL' })
   })
 
+  it('returns 400 when URL uses a non-http scheme', async () => {
+    const res = await POST(makeRequest({ url: 'file:///etc/passwd' }))
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ error: 'URL must use http or https' })
+  })
+
   it('returns 400 for an unparseable JSON body', async () => {
     const req = new NextRequest('http://localhost/api/parse', {
       method: 'POST',
