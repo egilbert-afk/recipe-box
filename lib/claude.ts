@@ -56,11 +56,17 @@ Rules:
 export async function fetchUrl(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: {
-      // Identify as a browser to avoid bot-blocking by recipe sites
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Cache-Control': 'no-cache',
     },
     signal: AbortSignal.timeout(15000),
   })
+
+  if (res.status === 403) {
+    throw new Error('This site blocked the request — paste the recipe URL directly into your browser, copy the text, and use manual entry instead.')
+  }
 
   if (!res.ok) {
     throw new Error(`Failed to fetch URL: ${res.status} ${res.statusText}`)
