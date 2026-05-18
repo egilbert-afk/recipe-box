@@ -155,6 +155,8 @@ export default function AddRecipePage() {
         return
       }
       prefillForm(data)
+    } catch {
+      setUploadError('Something went wrong. Please try again.')
     } finally {
       setUploading(false)
     }
