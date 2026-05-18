@@ -218,6 +218,8 @@ npm run dev
 |-------|-------|-------|
 | `source_url` not validated server-side | 2 | API accepts any string; only the browser enforces `type="url"`. Add URL validation in the API route. |
 | No max-length validation on text inputs | 2 | Title, ingredient names, and step instructions are unbounded. Add limits before Layer 2. |
+| Dotdash Meredith sites return 403 | 2 | Simply Recipes, Serious Eats, Allrecipes, and The Spruce Eats block automated fetches despite browser headers. User sees a clear error message and can fall back to manual entry. No fix without a paid scraping service. |
+| Claude model version is one release behind | 2 | `lib/claude.ts` uses `claude-sonnet-4-20250514`; current Sonnet is `claude-sonnet-4-6`. Update when convenient. |
 
 ---
 
