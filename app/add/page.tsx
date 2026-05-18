@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { CUISINES, MEAL_TYPES } from '@/lib/constants'
 import type { CuisineId, MealTypeId, CreateRecipeInput } from '@/lib/types'
 
-type CaptureMode = 'url' | 'manual'
+type CaptureMode = 'url' | 'upload' | 'manual'
 
 interface IngredientRow {
   id: number
@@ -34,6 +34,12 @@ export default function AddRecipePage() {
   const [urlInput, setUrlInput] = useState('')
   const [fetching, setFetching] = useState(false)
   const [fetchError, setFetchError] = useState('')
+
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('')
+  const [textInput, setTextInput] = useState('')
+  const [uploadError, setUploadError] = useState('')
+  const [uploading, setUploading] = useState(false)
 
   const [title, setTitle] = useState('')
   const [cuisineId, setCuisineId] = useState<CuisineId | ''>('')
@@ -89,6 +95,68 @@ export default function AddRecipePage() {
       prefillForm(data)
     } finally {
       setFetching(false)
+    }
+  }
+
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Image must be under 5 MB.')
+      return
+    }
+    setUploadError('')
+    setImageFile(file)
+    setImagePreviewUrl(URL.createObjectURL(file))
+  }
+
+  async function handlePhotoSubmit() {
+    if (!imageFile) return
+    setUploadError('')
+    setUploading(true)
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve((reader.result as string).split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(imageFile)
+      })
+      const res = await fetch('/api/parse-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64, mimeType: imageFile.type }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setUploadError(data.error ?? 'Could not read photo. Try entering the recipe manually.')
+        return
+      }
+      prefillForm(data)
+    } catch {
+      setUploadError('Something went wrong reading the photo. Try again.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function handleTextSubmit() {
+    if (!textInput.trim()) return
+    setUploadError('')
+    setUploading(true)
+    try {
+      const res = await fetch('/api/parse-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textInput.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setUploadError(data.error ?? 'Could not parse recipe. Try entering it manually.')
+        return
+      }
+      prefillForm(data)
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -189,7 +257,16 @@ export default function AddRecipePage() {
               mode === 'url' ? 'bg-black text-white' : 'bg-white text-gray-600'
             }`}
           >
-            Paste a URL
+            Paste URL
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('upload'); setFormVisible(false) }}
+            className={`flex-1 h-12 text-sm font-medium transition-colors ${
+              mode === 'upload' ? 'bg-black text-white' : 'bg-white text-gray-600'
+            }`}
+          >
+            Photo / Text
           </button>
           <button
             type="button"
@@ -198,7 +275,7 @@ export default function AddRecipePage() {
               mode === 'manual' ? 'bg-black text-white' : 'bg-white text-gray-600'
             }`}
           >
-            Enter manually
+            Type it in
           </button>
         </div>
 
@@ -230,10 +307,78 @@ export default function AddRecipePage() {
           </div>
         )}
 
+        {/* Photo / Text capture */}
+        {mode === 'upload' && (
+          <div className="space-y-6">
+            {/* Photo section */}
+            <div className="space-y-3">
+              <label className="block cursor-pointer">
+                <div className="flex flex-col items-center justify-center h-36 w-full border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 overflow-hidden">
+                  {imagePreviewUrl ? (
+                    <img src={imagePreviewUrl} alt="Recipe preview" className="h-full w-full object-contain" />
+                  ) : (
+                    <div className="text-center px-4">
+                      <p className="text-sm font-medium text-gray-700">Take photo or upload image</p>
+                      <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP · max 5 MB</p>
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="sr-only"
+                  onChange={handleImageSelect}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={handlePhotoSubmit}
+                disabled={!imageFile || uploading}
+                className="flex items-center justify-center h-12 w-full rounded-full bg-black text-white text-sm font-medium disabled:opacity-50"
+              >
+                {uploading ? 'Reading photo...' : 'Parse Photo'}
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs text-gray-400 uppercase tracking-wide">or paste recipe text</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            {/* Text paste section */}
+            <div className="space-y-3">
+              <textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder="Paste recipe text here — ingredients, steps, anything Claude can read..."
+                rows={6}
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base resize-none"
+              />
+              <button
+                type="button"
+                onClick={handleTextSubmit}
+                disabled={!textInput.trim() || uploading}
+                className="flex items-center justify-center h-12 w-full rounded-full bg-black text-white text-sm font-medium disabled:opacity-50"
+              >
+                {uploading ? 'Reading recipe...' : 'Parse Text'}
+              </button>
+            </div>
+
+            {uploadError && <p className="text-red-600 text-sm">{uploadError}</p>}
+            {uploading && (
+              <p className="text-sm text-gray-500 text-center">
+                Claude is reading the recipe — this takes about 10 seconds.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Recipe form — shown after URL parse or in manual mode */}
         {formVisible && (
           <form onSubmit={handleSubmit} className="space-y-8">
-            {mode === 'url' && (
+            {mode !== 'manual' && (
               <p className="text-sm text-gray-500">
                 Review the extracted recipe below. Edit anything that looks off, then save.
               </p>
