@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { CUISINES, MEAL_TYPES } from '@/lib/constants'
 import type { CuisineId, MealTypeId, CreateRecipeInput } from '@/lib/types'
 
+type CaptureMode = 'url' | 'manual'
+
 interface IngredientRow {
   id: number
   name: string
@@ -17,8 +19,21 @@ interface StepRow {
   instruction: string
 }
 
+function emptyIngredient(id: number): IngredientRow {
+  return { id, name: '', amount: '', unit: '' }
+}
+
+function emptyStep(id: number): StepRow {
+  return { id, instruction: '' }
+}
+
 export default function AddRecipePage() {
   const router = useRouter()
+
+  const [mode, setMode] = useState<CaptureMode>('url')
+  const [urlInput, setUrlInput] = useState('')
+  const [fetching, setFetching] = useState(false)
+  const [fetchError, setFetchError] = useState('')
 
   const [title, setTitle] = useState('')
   const [cuisineId, setCuisineId] = useState<CuisineId | ''>('')
@@ -26,19 +41,63 @@ export default function AddRecipePage() {
   const [servings, setServings] = useState('4')
   const [sourceUrl, setSourceUrl] = useState('')
   const [nextId, setNextId] = useState(2)
-  const [ingredients, setIngredients] = useState<IngredientRow[]>([
-    { id: 0, name: '', amount: '', unit: '' },
-  ])
-  const [steps, setSteps] = useState<StepRow[]>([{ id: 1, instruction: '' }])
+  const [ingredients, setIngredients] = useState<IngredientRow[]>([emptyIngredient(0)])
+  const [steps, setSteps] = useState<StepRow[]>([emptyStep(1)])
+  const [formVisible, setFormVisible] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  function updateIngredient(index: number, field: keyof IngredientRow, value: string) {
+  function prefillForm(data: CreateRecipeInput) {
+    setTitle(data.title)
+    setCuisineId(data.cuisine_id)
+    setMealTypeId(data.meal_type_id)
+    setServings(String(data.servings))
+    setSourceUrl(data.source_url ?? '')
+    let id = 0
+    setIngredients(
+      data.ingredients.map((ing) => ({
+        id: id++,
+        name: ing.name,
+        amount: ing.amount !== null ? String(ing.amount) : '',
+        unit: ing.unit ?? '',
+      }))
+    )
+    setSteps(data.steps.map((s) => ({ id: id++, instruction: s.instruction })))
+    setNextId(id)
+    setFormVisible(true)
+  }
+
+  async function handleFetchUrl() {
+    setFetchError('')
+    if (!urlInput.trim()) return
+
+    setFetching(true)
+    try {
+      const res = await fetch('/api/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: urlInput.trim() }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setFetchError(data.error ?? 'Could not parse recipe. Try entering it manually.')
+        return
+      }
+
+      prefillForm(data)
+    } finally {
+      setFetching(false)
+    }
+  }
+
+  function updateIngredient(index: number, field: Exclude<keyof IngredientRow, 'id'>, value: string) {
     setIngredients((prev) => prev.map((ing, i) => (i === index ? { ...ing, [field]: value } : ing)))
   }
 
   function addIngredient() {
-    setIngredients((prev) => [...prev, { id: nextId, name: '', amount: '', unit: '' }])
+    setIngredients((prev) => [...prev, emptyIngredient(nextId)])
     setNextId((n) => n + 1)
   }
 
@@ -51,7 +110,7 @@ export default function AddRecipePage() {
   }
 
   function addStep() {
-    setSteps((prev) => [...prev, { id: nextId, instruction: '' }])
+    setSteps((prev) => [...prev, emptyStep(nextId)])
     setNextId((n) => n + 1)
   }
 
@@ -88,7 +147,6 @@ export default function AddRecipePage() {
     }
 
     setSubmitting(true)
-
     try {
       const res = await fetch('/api/recipes', {
         method: 'POST',
@@ -121,187 +179,246 @@ export default function AddRecipePage() {
         <h1 className="text-lg font-semibold">Add Recipe</h1>
       </header>
 
-      <form onSubmit={handleSubmit} className="px-4 py-6 space-y-8">
-        {error && (
-          <p className="text-red-600 text-sm">{error}</p>
+      <div className="px-4 py-6 space-y-6">
+        {/* Mode toggle */}
+        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => { setMode('url'); setFormVisible(false) }}
+            className={`flex-1 h-12 text-sm font-medium transition-colors ${
+              mode === 'url' ? 'bg-black text-white' : 'bg-white text-gray-600'
+            }`}
+          >
+            Paste a URL
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('manual'); setFormVisible(true) }}
+            className={`flex-1 h-12 text-sm font-medium transition-colors ${
+              mode === 'manual' ? 'bg-black text-white' : 'bg-white text-gray-600'
+            }`}
+          >
+            Enter manually
+          </button>
+        </div>
+
+        {/* URL capture */}
+        {mode === 'url' && (
+          <div className="space-y-3">
+            <input
+              type="url"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="https://www.seriouseats.com/..."
+              className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base"
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleFetchUrl() } }}
+            />
+            {fetchError && <p className="text-red-600 text-sm">{fetchError}</p>}
+            <button
+              type="button"
+              onClick={handleFetchUrl}
+              disabled={fetching || !urlInput.trim()}
+              className="flex items-center justify-center h-12 w-full rounded-full bg-black text-white text-sm font-medium disabled:opacity-50"
+            >
+              {fetching ? 'Fetching recipe...' : 'Fetch Recipe'}
+            </button>
+            {fetching && (
+              <p className="text-sm text-gray-500 text-center">
+                Claude is reading the page and extracting the recipe — this takes about 10 seconds.
+              </p>
+            )}
+          </div>
         )}
 
-        {/* Title */}
-        <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-700">Title</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base"
-            placeholder="e.g. Roast Chicken"
-            required
-          />
-        </div>
+        {/* Recipe form — shown after URL parse or in manual mode */}
+        {formVisible && (
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {mode === 'url' && (
+              <p className="text-sm text-gray-500">
+                Review the extracted recipe below. Edit anything that looks off, then save.
+              </p>
+            )}
 
-        {/* Cuisine */}
-        <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-700">Cuisine</label>
-          <select
-            value={cuisineId}
-            onChange={(e) => setCuisineId(e.target.value as CuisineId)}
-            className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base bg-white"
-            required
-          >
-            <option value="">Select cuisine</option>
-            {CUISINES.map((c) => (
-              <option key={c.id} value={c.id}>{c.label}</option>
-            ))}
-          </select>
-        </div>
+            {error && <p className="text-red-600 text-sm">{error}</p>}
 
-        {/* Meal type */}
-        <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-700">Meal type</label>
-          <select
-            value={mealTypeId}
-            onChange={(e) => setMealTypeId(e.target.value as MealTypeId)}
-            className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base bg-white"
-            required
-          >
-            <option value="">Select meal type</option>
-            {MEAL_TYPES.map((m) => (
-              <option key={m.id} value={m.id}>{m.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Servings */}
-        <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-700">Servings</label>
-          <input
-            type="number"
-            min="1"
-            value={servings}
-            onChange={(e) => setServings(e.target.value)}
-            className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base"
-            required
-          />
-          <p className="text-sm text-gray-500">If the recipe says a range (e.g. 3–4), enter the larger number.</p>
-        </div>
-
-        {/* Source URL */}
-        <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-700">
-            Source URL <span className="text-gray-400 font-normal">(optional)</span>
-          </label>
-          <input
-            type="url"
-            value={sourceUrl}
-            onChange={(e) => setSourceUrl(e.target.value)}
-            className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base"
-            placeholder="https://..."
-          />
-        </div>
-
-        {/* Ingredients */}
-        <div className="space-y-3">
-          <div>
-            <h2 className="text-sm font-medium text-gray-700">Ingredients</h2>
-            <p className="text-sm text-gray-500">Add one ingredient per row.</p>
-          </div>
-          {ingredients.map((ing, i) => (
-            <div key={ing.id} className="flex gap-2 items-start">
-              <div className="flex-1 space-y-2">
-                <input
-                  type="text"
-                  value={ing.name}
-                  onChange={(e) => updateIngredient(i, 'name', e.target.value)}
-                  placeholder="Ingredient"
-                  className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base"
-                />
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    value={ing.amount}
-                    onChange={(e) => updateIngredient(i, 'amount', e.target.value)}
-                    placeholder="Amount"
-                    min="0"
-                    step="any"
-                    className="w-24 h-12 px-3 border border-gray-300 rounded-lg text-base"
-                  />
-                  <input
-                    type="text"
-                    value={ing.unit}
-                    onChange={(e) => updateIngredient(i, 'unit', e.target.value)}
-                    placeholder="Unit (e.g. cups)"
-                    className="flex-1 h-12 px-3 border border-gray-300 rounded-lg text-base"
-                  />
-                </div>
-              </div>
-              {ingredients.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeIngredient(i)}
-                  className="flex items-center justify-center h-12 w-12 text-gray-400 hover:text-red-500"
-                  aria-label="Remove ingredient"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={addIngredient}
-            className="flex items-center justify-center h-12 w-full border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-gray-400"
-          >
-            + Add ingredient
-          </button>
-        </div>
-
-        {/* Steps */}
-        <div className="space-y-3">
-          <div>
-            <h2 className="text-sm font-medium text-gray-700">Steps</h2>
-            <p className="text-sm text-gray-500">Add one step per box, in order.</p>
-          </div>
-          {steps.map((step, i) => (
-            <div key={step.id} className="flex gap-2 items-start">
-              <span className="flex-shrink-0 flex items-center justify-center h-12 w-8 text-sm font-medium text-gray-500">
-                {i + 1}
-              </span>
-              <textarea
-                value={step.instruction}
-                onChange={(e) => updateStep(i, e.target.value)}
-                placeholder={`Step ${i + 1}`}
-                rows={2}
-                className="flex-1 px-3 py-3 border border-gray-300 rounded-lg text-base resize-none"
+            {/* Title */}
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">Title</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base"
+                placeholder="e.g. Roast Chicken"
+                required
               />
-              {steps.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeStep(i)}
-                  className="flex items-center justify-center h-12 w-12 text-gray-400 hover:text-red-500"
-                  aria-label="Remove step"
-                >
-                  ×
-                </button>
-              )}
             </div>
-          ))}
-          <button
-            type="button"
-            onClick={addStep}
-            className="flex items-center justify-center h-12 w-full border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-gray-400"
-          >
-            + Add step
-          </button>
-        </div>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="flex items-center justify-center h-14 w-full rounded-full bg-black text-white text-base font-medium disabled:opacity-50"
-        >
-          {submitting ? 'Saving...' : 'Save Recipe'}
-        </button>
-      </form>
+            {/* Cuisine */}
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">Cuisine</label>
+              <select
+                value={cuisineId}
+                onChange={(e) => setCuisineId(e.target.value as CuisineId)}
+                className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base bg-white"
+                required
+              >
+                <option value="">Select cuisine</option>
+                {CUISINES.map((c) => (
+                  <option key={c.id} value={c.id}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Meal type */}
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">Meal type</label>
+              <select
+                value={mealTypeId}
+                onChange={(e) => setMealTypeId(e.target.value as MealTypeId)}
+                className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base bg-white"
+                required
+              >
+                <option value="">Select meal type</option>
+                {MEAL_TYPES.map((m) => (
+                  <option key={m.id} value={m.id}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Servings */}
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">Servings</label>
+              <input
+                type="number"
+                min="1"
+                value={servings}
+                onChange={(e) => setServings(e.target.value)}
+                className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base"
+                required
+              />
+              <p className="text-sm text-gray-500">If the recipe says a range (e.g. 3–4), enter the larger number.</p>
+            </div>
+
+            {/* Source URL */}
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Source URL <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input
+                type="url"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base"
+                placeholder="https://..."
+              />
+            </div>
+
+            {/* Ingredients */}
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-sm font-medium text-gray-700">Ingredients</h2>
+                <p className="text-sm text-gray-500">Add one ingredient per row.</p>
+              </div>
+              {ingredients.map((ing, i) => (
+                <div key={ing.id} className="flex gap-2 items-start">
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      value={ing.name}
+                      onChange={(e) => updateIngredient(i, 'name', e.target.value)}
+                      placeholder="Ingredient"
+                      className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base"
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={ing.amount}
+                        onChange={(e) => updateIngredient(i, 'amount', e.target.value)}
+                        placeholder="Amount"
+                        min="0"
+                        step="any"
+                        className="w-24 h-12 px-3 border border-gray-300 rounded-lg text-base"
+                      />
+                      <input
+                        type="text"
+                        value={ing.unit}
+                        onChange={(e) => updateIngredient(i, 'unit', e.target.value)}
+                        placeholder="Unit (e.g. cups)"
+                        className="flex-1 h-12 px-3 border border-gray-300 rounded-lg text-base"
+                      />
+                    </div>
+                  </div>
+                  {ingredients.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeIngredient(i)}
+                      className="flex items-center justify-center h-12 w-12 text-gray-400 hover:text-red-500"
+                      aria-label="Remove ingredient"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addIngredient}
+                className="flex items-center justify-center h-12 w-full border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-gray-400"
+              >
+                + Add ingredient
+              </button>
+            </div>
+
+            {/* Steps */}
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-sm font-medium text-gray-700">Steps</h2>
+                <p className="text-sm text-gray-500">Add one step per box, in order.</p>
+              </div>
+              {steps.map((step, i) => (
+                <div key={step.id} className="flex gap-2 items-start">
+                  <span className="flex-shrink-0 flex items-center justify-center h-12 w-8 text-sm font-medium text-gray-500">
+                    {i + 1}
+                  </span>
+                  <textarea
+                    value={step.instruction}
+                    onChange={(e) => updateStep(i, e.target.value)}
+                    placeholder={`Step ${i + 1}`}
+                    rows={2}
+                    className="flex-1 px-3 py-3 border border-gray-300 rounded-lg text-base resize-none"
+                  />
+                  {steps.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeStep(i)}
+                      className="flex items-center justify-center h-12 w-12 text-gray-400 hover:text-red-500"
+                      aria-label="Remove step"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addStep}
+                className="flex items-center justify-center h-12 w-full border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-gray-400"
+              >
+                + Add step
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex items-center justify-center h-14 w-full rounded-full bg-black text-white text-base font-medium disabled:opacity-50"
+            >
+              {submitting ? 'Saving...' : 'Save Recipe'}
+            </button>
+          </form>
+        )}
+      </div>
     </div>
   )
 }
