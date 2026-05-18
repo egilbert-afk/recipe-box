@@ -57,14 +57,24 @@ describe('parseRecipeFromUrl', () => {
     expect(result.title).toBe('Test Pasta')
   })
 
-  it('throws when fetch returns a non-OK status', async () => {
+  it('throws a user-friendly message when the site returns 403', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,
       status: 403,
       statusText: 'Forbidden',
     }))
 
-    await expect(parseRecipeFromUrl('https://example.com')).rejects.toThrow('Failed to fetch URL: 403')
+    await expect(parseRecipeFromUrl('https://example.com')).rejects.toThrow('This site blocked the request')
+  })
+
+  it('throws a generic message for other non-OK statuses', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error',
+    }))
+
+    await expect(parseRecipeFromUrl('https://example.com')).rejects.toThrow('Failed to fetch URL: 500')
   })
 
   it('throws when Claude returns malformed JSON', async () => {
