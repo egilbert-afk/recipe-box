@@ -21,7 +21,9 @@ interface ParsedRecipe {
   }>
 }
 
-const SYSTEM_PROMPT = `You are a recipe parser. Extract recipe data from the provided HTML and return ONLY a JSON object with no markdown, no explanation, no code fences.
+export type SupportedImageMimeType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+
+const SYSTEM_PROMPT = `You are a recipe parser. Extract recipe data from the provided content and return ONLY a JSON object with no markdown, no explanation, no code fences.
 
 The JSON must have exactly these fields:
 {
@@ -117,22 +119,8 @@ function isValidParsedRecipe(data: unknown): data is ParsedRecipe {
   return true
 }
 
-export async function parseRecipeFromUrl(url: string): Promise<CreateRecipeInput> {
-  const html = await fetchUrl(url)
-  const text = stripHtml(html)
-
-  const message = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 4096,
-    system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: 'user',
-        content: `Parse this recipe page into JSON:\n\n${text}`,
-      },
-    ],
-  })
-
+// Shared: validates Claude's response and returns a CreateRecipeInput (without source_url)
+function extractRecipeFromMessage(message: Anthropic.Message): CreateRecipeInput {
   const rawText = message.content[0].type === 'text' ? message.content[0].text : ''
 
   // Strip markdown fences if Claude included them despite instructions
@@ -154,8 +142,57 @@ export async function parseRecipeFromUrl(url: string): Promise<CreateRecipeInput
     cuisine_id: parsed.cuisine_id,
     meal_type_id: parsed.meal_type_id,
     servings: parsed.servings,
-    source_url: url,
     ingredients: parsed.ingredients,
     steps: parsed.steps,
   }
+}
+
+export async function parseRecipeFromUrl(url: string): Promise<CreateRecipeInput> {
+  const html = await fetchUrl(url)
+  const text = stripHtml(html)
+
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 4096,
+    system: SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: `Parse this recipe page into JSON:\n\n${text}` }],
+  })
+
+  return { ...extractRecipeFromMessage(message), source_url: url }
+}
+
+export async function parseRecipeFromText(text: string): Promise<CreateRecipeInput> {
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 4096,
+    system: SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: `Parse this recipe into JSON:\n\n${text}` }],
+  })
+
+  return extractRecipeFromMessage(message)
+}
+
+export async function parseRecipeFromImage(
+  base64: string,
+  mimeType: SupportedImageMimeType
+): Promise<CreateRecipeInput> {
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 4096,
+    system: SYSTEM_PROMPT,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: mimeType, data: base64 },
+          },
+          { type: 'text', text: 'Parse this recipe into JSON:' },
+        ],
+      },
+    ],
+  })
+
+  return extractRecipeFromMessage(message)
 }

@@ -9,7 +9,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
   },
 }))
 
-import { parseRecipeFromUrl } from '@/lib/claude'
+import { parseRecipeFromUrl, parseRecipeFromText, parseRecipeFromImage } from '@/lib/claude'
 
 const validClaudeResponse = {
   title: 'Test Pasta',
@@ -109,5 +109,63 @@ describe('parseRecipeFromUrl', () => {
     })
 
     await expect(parseRecipeFromUrl('https://example.com')).rejects.toThrow('incomplete recipe data')
+  })
+})
+
+describe('parseRecipeFromText', () => {
+  it('returns a valid CreateRecipeInput and no source_url', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify(validClaudeResponse) }],
+    })
+
+    const result = await parseRecipeFromText('Pasta carbonara recipe...')
+
+    expect(result.title).toBe('Test Pasta')
+    expect(result.source_url).toBeUndefined()
+  })
+
+  it('throws when Claude returns malformed JSON', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: 'not json' }],
+    })
+
+    await expect(parseRecipeFromText('some recipe text')).rejects.toThrow('malformed JSON')
+  })
+
+  it('throws when Claude returns incomplete data', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify({ title: 'Incomplete' }) }],
+    })
+
+    await expect(parseRecipeFromText('some recipe text')).rejects.toThrow('incomplete recipe data')
+  })
+})
+
+describe('parseRecipeFromImage', () => {
+  it('returns a valid CreateRecipeInput and no source_url', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify(validClaudeResponse) }],
+    })
+
+    const result = await parseRecipeFromImage('base64data==', 'image/jpeg')
+
+    expect(result.title).toBe('Test Pasta')
+    expect(result.source_url).toBeUndefined()
+  })
+
+  it('throws when Claude returns malformed JSON', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: 'not json' }],
+    })
+
+    await expect(parseRecipeFromImage('base64data==', 'image/png')).rejects.toThrow('malformed JSON')
+  })
+
+  it('throws when Claude returns incomplete data', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify({ title: 'Incomplete' }) }],
+    })
+
+    await expect(parseRecipeFromImage('base64data==', 'image/jpeg')).rejects.toThrow('incomplete recipe data')
   })
 })
