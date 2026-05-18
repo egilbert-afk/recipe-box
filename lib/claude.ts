@@ -31,7 +31,7 @@ The JSON must have exactly these fields:
   "servings": number (integer, pick the larger if a range),
   "ingredients": [
     {
-      "name": string (ingredient name only, no amounts),
+      "name": string (ingredient name plus any preparation notes, e.g. "onion, finely diced" or "butter, softened" — exclude amounts and units which go in the fields below),
       "amount": number or null (null if no quantity, e.g. "salt to taste"),
       "unit": string or null (null if measured by count, e.g. "2 eggs"),
       "order_index": number (0-based)
