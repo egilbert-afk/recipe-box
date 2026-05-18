@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
+import { sortTitle } from '@/lib/formatters'
 import type { Recipe } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -10,11 +11,14 @@ export default async function RecipesPage() {
     .from('recipes')
     .select('id, title, cuisine_id, meal_type_id, servings, created_at')
     .eq('archived', false)
-    .order('created_at', { ascending: false })
 
   if (error) {
     return <p className="p-4 text-red-600">Failed to load recipes: {error.message}</p>
   }
+
+  const sorted = [...(recipes ?? [])].sort((a, b) =>
+    sortTitle(a.title).localeCompare(sortTitle(b.title))
+  )
 
   return (
     <div className="min-h-screen bg-white">
@@ -41,7 +45,7 @@ export default async function RecipesPage() {
           </div>
         ) : (
           <ul className="divide-y divide-gray-100">
-            {(recipes as Recipe[]).map((recipe) => (
+            {(sorted as Recipe[]).map((recipe) => (
               <li key={recipe.id}>
                 <Link href={`/recipes/${recipe.id}`} className="flex flex-col py-4 gap-1">
                   <span className="text-base font-medium text-gray-900">{recipe.title}</span>

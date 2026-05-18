@@ -1,3 +1,8 @@
+// Returns a sort key for a recipe title, ignoring a leading "The "
+export function sortTitle(title: string): string {
+  return title.replace(/^the\s+/i, '').toLowerCase()
+}
+
 // Capitalizes the first letter of a string
 export function capitalize(str: string): string {
   if (!str) return ''

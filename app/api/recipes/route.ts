@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { sortTitle } from '@/lib/formatters'
 import type { CreateRecipeInput } from '@/lib/types'
 
 export async function GET() {
@@ -7,13 +8,16 @@ export async function GET() {
     .from('recipes')
     .select('id, title, cuisine_id, meal_type_id, source_url, servings, capture_method, created_at, updated_at')
     .eq('archived', false)
-    .order('created_at', { ascending: false })
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json(data)
+  const sorted = [...(data ?? [])].sort((a, b) =>
+    sortTitle(a.title).localeCompare(sortTitle(b.title))
+  )
+
+  return NextResponse.json(sorted)
 }
 
 export async function POST(request: NextRequest) {
