@@ -2,23 +2,48 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
 import { sortTitle } from '@/lib/formatters'
-import type { Recipe } from '@/lib/types'
+import { parseSearchQuery } from '@/lib/search'
+import type { CuisineId, MealTypeId } from '@/lib/types'
+
+type RecipeListItem = {
+  id: string
+  title: string
+  cuisine_id: CuisineId
+  meal_type_id: MealTypeId
+  servings: number
+}
 
 export const dynamic = 'force-dynamic'
 
-export default async function RecipesPage() {
-  const { data: recipes, error } = await supabase
-    .from('recipes')
-    .select('id, title, cuisine_id, meal_type_id, servings, created_at')
-    .eq('archived', false)
+export default async function RecipesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>
+}) {
+  const { q } = await searchParams
+  const query = q?.trim() ?? ''
+  const tsquery = query ? parseSearchQuery(query) : ''
 
-  if (error) {
-    return <p className="p-4 text-red-600">Failed to load recipes: {error.message}</p>
+  let recipes: RecipeListItem[] = []
+  let loadError = ''
+
+  if (query && tsquery) {
+    const { data, error } = await supabase.rpc('search_recipes_by_ingredient', { query: tsquery })
+    if (error) loadError = error.message
+    else recipes = data ?? []
+  } else if (!query) {
+    const { data, error } = await supabase
+      .from('recipes')
+      .select('id, title, cuisine_id, meal_type_id, servings, created_at')
+      .eq('archived', false)
+    if (error) loadError = error.message
+    else recipes = [...(data ?? [])].sort((a, b) => sortTitle(a.title).localeCompare(sortTitle(b.title)))
   }
+  // query exists but tsquery is empty (all stopwords) → recipes stays []
 
-  const sorted = [...(recipes ?? [])].sort((a, b) =>
-    sortTitle(a.title).localeCompare(sortTitle(b.title))
-  )
+  if (loadError) {
+    return <p className="p-4 text-red-600">Failed to load recipes: {loadError}</p>
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -32,8 +57,40 @@ export default async function RecipesPage() {
         </Link>
       </header>
 
-      <main className="px-4 py-4">
-        {recipes.length === 0 ? (
+      <main className="px-4 py-4 space-y-4">
+        {/* Search form */}
+        <form action="/recipes" method="GET" className="flex gap-2">
+          <input
+            name="q"
+            type="search"
+            defaultValue={query}
+            placeholder="Search by ingredient..."
+            className="flex-1 h-12 px-4 border border-gray-300 rounded-full text-base"
+          />
+          <button
+            type="submit"
+            className="h-12 px-5 rounded-full bg-black text-white text-sm font-medium"
+          >
+            Search
+          </button>
+        </form>
+
+        {/* Active search context */}
+        {query && (
+          <div className="flex items-center justify-between text-sm text-gray-500">
+            <span>
+              {recipes.length === 0
+                ? `No results for "${query}"`
+                : `${recipes.length} recipe${recipes.length === 1 ? '' : 's'} with "${query}"`}
+            </span>
+            <Link href="/recipes" className="text-black underline underline-offset-2">
+              Clear
+            </Link>
+          </div>
+        )}
+
+        {/* Recipe list */}
+        {!query && recipes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <p className="text-gray-500 text-lg mb-6">No recipes yet.</p>
             <Link
@@ -45,7 +102,7 @@ export default async function RecipesPage() {
           </div>
         ) : (
           <ul className="divide-y divide-gray-100">
-            {(sorted as Recipe[]).map((recipe) => (
+            {recipes.map((recipe) => (
               <li key={recipe.id}>
                 <Link href={`/recipes/${recipe.id}`} className="flex flex-col py-4 gap-1">
                   <span className="text-base font-medium text-gray-900">{recipe.title}</span>

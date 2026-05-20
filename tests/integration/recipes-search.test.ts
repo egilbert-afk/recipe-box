@@ -57,7 +57,7 @@ describe('GET /api/recipes/search', () => {
   })
 
   it('calls rpc with OR-joined tsquery and returns results', async () => {
-    mockRpc.mockResolvedValueOnce({ data: mockResults, error: null })
+    mockRpc.mockResolvedValueOnce({ data: mockResults, error: null } as any)
 
     const res = await GET(makeRequest('chicken lemon'))
 
@@ -67,7 +67,7 @@ describe('GET /api/recipes/search', () => {
   })
 
   it('strips stopwords from the query before calling rpc', async () => {
-    mockRpc.mockResolvedValueOnce({ data: mockResults, error: null })
+    mockRpc.mockResolvedValueOnce({ data: mockResults, error: null } as any)
 
     await GET(makeRequest('chicken and lemon'))
 
@@ -75,7 +75,7 @@ describe('GET /api/recipes/search', () => {
   })
 
   it('returns 500 when supabase rpc returns an error', async () => {
-    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'DB error' } })
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'DB error', details: '', hint: '', code: '500', toJSON: () => ({}), name: 'PostgrestError' } } as any)
 
     const res = await GET(makeRequest('chicken'))
 
@@ -84,7 +84,7 @@ describe('GET /api/recipes/search', () => {
   })
 
   it('returns empty array when rpc returns null data', async () => {
-    mockRpc.mockResolvedValueOnce({ data: null, error: null })
+    mockRpc.mockResolvedValueOnce({ data: null, error: null } as any)
 
     const res = await GET(makeRequest('chicken'))
 
