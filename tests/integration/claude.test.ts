@@ -142,15 +142,52 @@ describe('parseRecipeFromText', () => {
 })
 
 describe('parseRecipeFromImage', () => {
-  it('returns a valid CreateRecipeInput and no source_url', async () => {
+  it('throws when called with an empty array', async () => {
+    await expect(parseRecipeFromImage([])).rejects.toThrow('At least one image is required')
+  })
+
+  it('throws when called with more than 10 images', async () => {
+    const images = Array.from({ length: 11 }, (_, i) => ({
+      data: `page${i}==`,
+      mimeType: 'image/jpeg' as const,
+    }))
+    await expect(parseRecipeFromImage(images)).rejects.toThrow('Too many images')
+  })
+
+  it('returns a valid CreateRecipeInput for a single image', async () => {
     mockCreate.mockResolvedValueOnce({
       content: [{ type: 'text', text: JSON.stringify(validClaudeResponse) }],
     })
 
-    const result = await parseRecipeFromImage('base64data==', 'image/jpeg')
+    const result = await parseRecipeFromImage([{ data: 'base64data==', mimeType: 'image/jpeg' }])
 
     expect(result.title).toBe('Test Pasta')
     expect(result.source_url).toBeUndefined()
+  })
+
+  it('returns a valid CreateRecipeInput for multiple images', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify(validClaudeResponse) }],
+    })
+
+    const result = await parseRecipeFromImage([
+      { data: 'page1==', mimeType: 'image/jpeg' },
+      { data: 'page2==', mimeType: 'image/jpeg' },
+    ])
+
+    expect(result.title).toBe('Test Pasta')
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            content: expect.arrayContaining([
+              expect.objectContaining({ type: 'image', source: expect.objectContaining({ data: 'page1==' }) }),
+              expect.objectContaining({ type: 'image', source: expect.objectContaining({ data: 'page2==' }) }),
+            ]),
+          }),
+        ]),
+      })
+    )
   })
 
   it('throws when Claude returns malformed JSON', async () => {
@@ -158,7 +195,9 @@ describe('parseRecipeFromImage', () => {
       content: [{ type: 'text', text: 'not json' }],
     })
 
-    await expect(parseRecipeFromImage('base64data==', 'image/png')).rejects.toThrow('malformed JSON')
+    await expect(
+      parseRecipeFromImage([{ data: 'base64data==', mimeType: 'image/png' }])
+    ).rejects.toThrow('malformed JSON')
   })
 
   it('throws when Claude returns incomplete data', async () => {
@@ -166,6 +205,8 @@ describe('parseRecipeFromImage', () => {
       content: [{ type: 'text', text: JSON.stringify({ title: 'Incomplete' }) }],
     })
 
-    await expect(parseRecipeFromImage('base64data==', 'image/jpeg')).rejects.toThrow('incomplete recipe data')
+    await expect(
+      parseRecipeFromImage([{ data: 'base64data==', mimeType: 'image/jpeg' }])
+    ).rejects.toThrow('incomplete recipe data')
   })
 })

@@ -173,9 +173,11 @@ export async function parseRecipeFromText(text: string): Promise<CreateRecipeInp
 }
 
 export async function parseRecipeFromImage(
-  base64: string,
-  mimeType: SupportedImageMimeType
+  images: Array<{ data: string; mimeType: SupportedImageMimeType }>
 ): Promise<CreateRecipeInput> {
+  if (images.length === 0) throw new Error('At least one image is required')
+  if (images.length > 10) throw new Error('Too many images — maximum 10 per request')
+
   const message = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 4096,
@@ -184,11 +186,11 @@ export async function parseRecipeFromImage(
       {
         role: 'user',
         content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: mimeType, data: base64 },
-          },
-          { type: 'text', text: 'Parse this recipe into JSON:' },
+          ...images.map((img) => ({
+            type: 'image' as const,
+            source: { type: 'base64' as const, media_type: img.mimeType, data: img.data },
+          })),
+          { type: 'text' as const, text: 'Parse this recipe into JSON:' },
         ],
       },
     ],

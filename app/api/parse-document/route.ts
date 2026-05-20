@@ -9,8 +9,10 @@ const SUPPORTED_IMAGE_TYPES: SupportedImageMimeType[] = [
   'image/webp',
 ]
 
+type ImageInput = { data: string; mimeType: string }
+
 export async function POST(request: NextRequest) {
-  let body: { text?: string; image?: string; mimeType?: string }
+  let body: { text?: string; images?: unknown }
 
   try {
     body = await request.json()
@@ -33,18 +35,37 @@ export async function POST(request: NextRequest) {
   }
 
   // Image path
-  if (body.image !== undefined) {
-    if (!body.image) {
-      return NextResponse.json({ error: 'Image data is required' }, { status: 400 })
+  if (body.images !== undefined) {
+    if (!Array.isArray(body.images) || body.images.length === 0) {
+      return NextResponse.json({ error: 'At least one image is required' }, { status: 400 })
     }
-    if (!SUPPORTED_IMAGE_TYPES.includes(body.mimeType as SupportedImageMimeType)) {
-      return NextResponse.json(
-        { error: 'Unsupported image type. Use JPEG, PNG, GIF, or WebP.' },
-        { status: 400 }
-      )
+    if (body.images.length > 10) {
+      return NextResponse.json({ error: 'Too many images — maximum 10 per request' }, { status: 400 })
     }
+
+    for (const img of body.images) {
+      if (typeof img !== 'object' || img === null) {
+        return NextResponse.json({ error: 'Each image must be an object with data and mimeType' }, { status: 400 })
+      }
+      const { data, mimeType } = img as ImageInput
+      if (!data) {
+        return NextResponse.json({ error: 'Image data is required' }, { status: 400 })
+      }
+      if (!SUPPORTED_IMAGE_TYPES.includes(mimeType as SupportedImageMimeType)) {
+        return NextResponse.json(
+          { error: 'Unsupported image type. Use JPEG, PNG, GIF, or WebP.' },
+          { status: 400 }
+        )
+      }
+    }
+
     try {
-      const recipe = await parseRecipeFromImage(body.image, body.mimeType as SupportedImageMimeType)
+      const recipe = await parseRecipeFromImage(
+        (body.images as ImageInput[]).map((img) => ({
+          data: img.data,
+          mimeType: img.mimeType as SupportedImageMimeType,
+        }))
+      )
       return NextResponse.json(recipe)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to parse recipe'
