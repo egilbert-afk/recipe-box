@@ -34,7 +34,7 @@ beforeEach(() => {
 })
 
 describe('POST /api/parse-document — no input', () => {
-  it('returns 400 when neither text nor image is provided', async () => {
+  it('returns 400 when neither text nor images is provided', async () => {
     const res = await POST(makeRequest({}))
     expect(res.status).toBe(400)
     expect(await res.json()).toMatchObject({ error: 'Provide either text or image data' })
@@ -79,38 +79,69 @@ describe('POST /api/parse-document — text', () => {
   })
 })
 
-describe('POST /api/parse-document — image', () => {
-  it('returns 400 when image data is empty', async () => {
-    const res = await POST(makeRequest({ image: '', mimeType: 'image/jpeg' }))
+describe('POST /api/parse-document — images', () => {
+  it('returns 400 when images is an empty array', async () => {
+    const res = await POST(makeRequest({ images: [] }))
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ error: 'At least one image is required' })
+  })
+
+  it('returns 400 when images exceeds the 10-image limit', async () => {
+    const images = Array.from({ length: 11 }, (_, i) => ({ data: `page${i}==`, mimeType: 'image/jpeg' }))
+    const res = await POST(makeRequest({ images }))
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ error: 'Too many images — maximum 10 per request' })
+  })
+
+  it('returns 400 when an array element is not an object', async () => {
+    const res = await POST(makeRequest({ images: ['not-an-object'] }))
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ error: expect.stringContaining('object') })
+  })
+
+  it('returns 400 when an image has no data', async () => {
+    const res = await POST(makeRequest({ images: [{ data: '', mimeType: 'image/jpeg' }] }))
     expect(res.status).toBe(400)
     expect(await res.json()).toMatchObject({ error: 'Image data is required' })
   })
 
   it('returns 400 for an unsupported MIME type', async () => {
-    const res = await POST(makeRequest({ image: 'base64data==', mimeType: 'image/bmp' }))
+    const res = await POST(makeRequest({ images: [{ data: 'base64data==', mimeType: 'image/bmp' }] }))
     expect(res.status).toBe(400)
     expect(await res.json()).toMatchObject({ error: 'Unsupported image type. Use JPEG, PNG, GIF, or WebP.' })
   })
 
-  it('returns 400 when mimeType is missing', async () => {
-    const res = await POST(makeRequest({ image: 'base64data==' }))
-    expect(res.status).toBe(400)
-  })
-
-  it('returns 200 with the parsed recipe', async () => {
+  it('returns 200 with a single image', async () => {
     mockParseImage.mockResolvedValueOnce(mockRecipe)
 
-    const res = await POST(makeRequest({ image: 'base64data==', mimeType: 'image/jpeg' }))
+    const res = await POST(makeRequest({ images: [{ data: 'base64data==', mimeType: 'image/jpeg' }] }))
 
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ title: 'Pasta Carbonara' })
-    expect(mockParseImage).toHaveBeenCalledWith('base64data==', 'image/jpeg')
+    expect(mockParseImage).toHaveBeenCalledWith([{ data: 'base64data==', mimeType: 'image/jpeg' }])
+  })
+
+  it('returns 200 with multiple images', async () => {
+    mockParseImage.mockResolvedValueOnce(mockRecipe)
+
+    const res = await POST(makeRequest({
+      images: [
+        { data: 'page1==', mimeType: 'image/jpeg' },
+        { data: 'page2==', mimeType: 'image/png' },
+      ],
+    }))
+
+    expect(res.status).toBe(200)
+    expect(mockParseImage).toHaveBeenCalledWith([
+      { data: 'page1==', mimeType: 'image/jpeg' },
+      { data: 'page2==', mimeType: 'image/png' },
+    ])
   })
 
   it('returns 422 when parsing fails', async () => {
     mockParseImage.mockRejectedValueOnce(new Error('Could not read image'))
 
-    const res = await POST(makeRequest({ image: 'base64data==', mimeType: 'image/png' }))
+    const res = await POST(makeRequest({ images: [{ data: 'base64data==', mimeType: 'image/png' }] }))
 
     expect(res.status).toBe(422)
     expect(await res.json()).toMatchObject({ error: 'Could not read image' })

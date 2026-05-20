@@ -35,8 +35,8 @@ export default function AddRecipePage() {
   const [fetching, setFetching] = useState(false)
   const [fetchError, setFetchError] = useState('')
 
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreviewUrl, setImagePreviewUrl] = useState('')
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([])
   const [textInput, setTextInput] = useState('')
   const [uploadError, setUploadError] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -103,28 +103,42 @@ export default function AddRecipePage() {
     if (!file) return
     if (file.size > 5 * 1024 * 1024) {
       setUploadError('Image must be under 5 MB.')
+      e.target.value = ''
       return
     }
     setUploadError('')
-    setImageFile(file)
-    setImagePreviewUrl(URL.createObjectURL(file))
+    setImageFiles((prev) => [...prev, file])
+    setImagePreviewUrls((prev) => [...prev, URL.createObjectURL(file)])
+    e.target.value = ''
+  }
+
+  function removeImage(index: number) {
+    URL.revokeObjectURL(imagePreviewUrls[index])
+    setImageFiles((prev) => prev.filter((_, i) => i !== index))
+    setImagePreviewUrls((prev) => prev.filter((_, i) => i !== index))
   }
 
   async function handlePhotoSubmit() {
-    if (!imageFile) return
+    if (!imageFiles.length) return
     setUploadError('')
     setUploading(true)
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve((reader.result as string).split(',')[1])
-        reader.onerror = reject
-        reader.readAsDataURL(imageFile)
-      })
+      const images = await Promise.all(
+        imageFiles.map(
+          (file) =>
+            new Promise<{ data: string; mimeType: string }>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onload = () =>
+                resolve({ data: (reader.result as string).split(',')[1], mimeType: file.type })
+              reader.onerror = reject
+              reader.readAsDataURL(file)
+            })
+        )
+      )
       const res = await fetch('/api/parse-document', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: base64, mimeType: imageFile.type }),
+        body: JSON.stringify({ images }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -314,17 +328,40 @@ export default function AddRecipePage() {
           <div className="space-y-6">
             {/* Photo section */}
             <div className="space-y-3">
-              <label className="block cursor-pointer">
-                <div className="flex flex-col items-center justify-center h-36 w-full border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 overflow-hidden">
-                  {imagePreviewUrl ? (
-                    <img src={imagePreviewUrl} alt="Recipe preview" className="h-full w-full object-contain" />
-                  ) : (
-                    <div className="text-center px-4">
-                      <p className="text-sm font-medium text-gray-700">Take photo or upload image</p>
-                      <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP · max 5 MB</p>
+              {/* Thumbnail strip */}
+              {imagePreviewUrls.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {imagePreviewUrls.map((url, i) => (
+                    <div key={i} className="relative flex-shrink-0">
+                      <img
+                        src={url}
+                        alt={`Page ${i + 1}`}
+                        className="h-20 w-20 object-cover rounded-lg border border-gray-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(i)}
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-gray-800 text-white text-xs flex items-center justify-center"
+                      >
+                        ×
+                      </button>
                     </div>
-                  )}
+                  ))}
                 </div>
+              )}
+
+              {/* Drop zone (empty state) or Add another page */}
+              <label className="block cursor-pointer">
+                {imagePreviewUrls.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-36 w-full border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400">
+                    <p className="text-sm font-medium text-gray-700">Take photo or upload image</p>
+                    <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP · max 5 MB</p>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-12 w-full border border-gray-300 rounded-full text-sm text-gray-600 hover:border-gray-400">
+                    + Add another page
+                  </div>
+                )}
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif"
@@ -332,13 +369,18 @@ export default function AddRecipePage() {
                   onChange={handleImageSelect}
                 />
               </label>
+
               <button
                 type="button"
                 onClick={handlePhotoSubmit}
-                disabled={!imageFile || uploading}
+                disabled={imageFiles.length === 0 || uploading}
                 className="flex items-center justify-center h-12 w-full rounded-full bg-black text-white text-sm font-medium disabled:opacity-50"
               >
-                {uploading ? 'Reading photo...' : 'Parse Photo'}
+                {uploading
+                  ? 'Reading photo...'
+                  : imageFiles.length > 1
+                    ? `Parse ${imageFiles.length} Photos`
+                    : 'Parse Photo'}
               </button>
             </div>
 
