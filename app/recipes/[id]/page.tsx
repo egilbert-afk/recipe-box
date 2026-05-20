@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
 import type { RecipeWithDetails } from '@/lib/types'
 import { formatIngredient } from '@/lib/formatters'
+import { ServingsPicker } from '@/components/ServingsPicker'
 
 export default async function RecipePage({
   params,
@@ -54,6 +55,8 @@ export default async function RecipePage({
             Serves {full.servings}
           </span>
         </div>
+
+        <ServingsPicker recipeId={full.id} baseServings={full.servings} />
 
         {full.source_url && (
           <a
