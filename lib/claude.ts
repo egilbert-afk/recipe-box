@@ -152,7 +152,7 @@ export async function parseRecipeFromUrl(url: string): Promise<CreateRecipeInput
   const text = stripHtml(html)
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: `Parse this recipe page into JSON:\n\n${text}` }],
@@ -163,7 +163,7 @@ export async function parseRecipeFromUrl(url: string): Promise<CreateRecipeInput
 
 export async function parseRecipeFromText(text: string): Promise<CreateRecipeInput> {
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: `Parse this recipe into JSON:\n\n${text}` }],
@@ -179,7 +179,7 @@ export async function parseRecipeFromImage(
   if (images.length > 10) throw new Error('Too many images — maximum 10 per request')
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
     messages: [
