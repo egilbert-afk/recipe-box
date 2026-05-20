@@ -350,25 +350,27 @@ export default function AddRecipePage() {
                 </div>
               )}
 
-              {/* Drop zone (empty state) or Add another page */}
-              <label className="block cursor-pointer">
-                {imagePreviewUrls.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-36 w-full border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400">
-                    <p className="text-sm font-medium text-gray-700">Take photo or upload image</p>
-                    <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP · max 5 MB</p>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-12 w-full border border-gray-300 rounded-full text-sm text-gray-600 hover:border-gray-400">
-                    + Add another page
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="sr-only"
-                  onChange={handleImageSelect}
-                />
-              </label>
+              {/* Drop zone (empty state) or Add another page (up to 10) */}
+              {imageFiles.length < 10 && (
+                <label className="block cursor-pointer">
+                  {imagePreviewUrls.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-36 w-full border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400">
+                      <p className="text-sm font-medium text-gray-700">Take photo or upload image</p>
+                      <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP · max 5 MB</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-12 w-full border border-gray-300 rounded-full text-sm text-gray-600 hover:border-gray-400">
+                      + Add another page
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="sr-only"
+                    onChange={handleImageSelect}
+                  />
+                </label>
+              )}
 
               <button
                 type="button"
