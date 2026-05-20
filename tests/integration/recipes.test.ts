@@ -86,6 +86,42 @@ describe('POST /api/recipes — validation', () => {
     expect(res.status).toBe(400)
     expect(await res.json()).toMatchObject({ error: 'At least one step is required' })
   })
+
+  it('returns 400 when title exceeds 200 characters', async () => {
+    const res = await POST(makeRequest({ ...validRecipeBody, title: 'A'.repeat(201) }))
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ error: 'Title must be 200 characters or fewer' })
+  })
+
+  it('returns 400 when source_url is not a valid URL', async () => {
+    const res = await POST(makeRequest({ ...validRecipeBody, source_url: 'not-a-url' }))
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ error: 'source_url must be a valid URL' })
+  })
+
+  it('returns 400 when source_url uses a non-http scheme', async () => {
+    const res = await POST(makeRequest({ ...validRecipeBody, source_url: 'file:///etc/passwd' }))
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ error: 'source_url must use http or https' })
+  })
+
+  it('returns 400 when an ingredient name exceeds 200 characters', async () => {
+    const res = await POST(makeRequest({
+      ...validRecipeBody,
+      ingredients: [{ name: 'A'.repeat(201), amount: 1, unit: 'cup', order_index: 0 }],
+    }))
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ error: 'Ingredient names must be 200 characters or fewer' })
+  })
+
+  it('returns 400 when a step instruction exceeds 2000 characters', async () => {
+    const res = await POST(makeRequest({
+      ...validRecipeBody,
+      steps: [{ instruction: 'A'.repeat(2001), order_index: 0 }],
+    }))
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ error: 'Step instructions must be 2000 characters or fewer' })
+  })
 })
 
 describe('POST /api/recipes — success', () => {
