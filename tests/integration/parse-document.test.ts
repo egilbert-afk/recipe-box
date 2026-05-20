@@ -59,6 +59,12 @@ describe('POST /api/parse-document — text', () => {
     expect(await res.json()).toMatchObject({ error: 'Text is required' })
   })
 
+  it('returns 400 when text exceeds 50,000 characters', async () => {
+    const res = await POST(makeRequest({ text: 'A'.repeat(50001) }))
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ error: 'Text must be 50,000 characters or fewer' })
+  })
+
   it('returns 200 with the parsed recipe', async () => {
     mockParseText.mockResolvedValueOnce(mockRecipe)
 

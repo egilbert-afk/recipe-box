@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
   if (!body.title?.trim()) {
     return NextResponse.json({ error: 'Title is required' }, { status: 400 })
   }
+  if (body.title.trim().length > 200) {
+    return NextResponse.json({ error: 'Title must be 200 characters or fewer' }, { status: 400 })
+  }
   if (!body.cuisine_id) {
     return NextResponse.json({ error: 'Cuisine is required' }, { status: 400 })
   }
@@ -46,6 +49,30 @@ export async function POST(request: NextRequest) {
   }
   if (!body.steps?.length) {
     return NextResponse.json({ error: 'At least one step is required' }, { status: 400 })
+  }
+  if (body.source_url) {
+    let parsedUrl: URL
+    try {
+      parsedUrl = new URL(body.source_url)
+    } catch {
+      return NextResponse.json({ error: 'source_url must be a valid URL' }, { status: 400 })
+    }
+    if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
+      return NextResponse.json({ error: 'source_url must use http or https' }, { status: 400 })
+    }
+    if (body.source_url.length > 2000) {
+      return NextResponse.json({ error: 'source_url must be 2000 characters or fewer' }, { status: 400 })
+    }
+  }
+  for (const ing of body.ingredients) {
+    if (ing.name.length > 200) {
+      return NextResponse.json({ error: 'Ingredient names must be 200 characters or fewer' }, { status: 400 })
+    }
+  }
+  for (const step of body.steps) {
+    if (step.instruction.length > 2000) {
+      return NextResponse.json({ error: 'Step instructions must be 2000 characters or fewer' }, { status: 400 })
+    }
   }
 
   const { data: recipe, error: recipeError } = await supabase

@@ -25,6 +25,9 @@ export async function POST(request: NextRequest) {
     if (!body.text.trim()) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 })
     }
+    if (body.text.length > 50000) {
+      return NextResponse.json({ error: 'Text must be 50,000 characters or fewer' }, { status: 400 })
+    }
     try {
       const recipe = await parseRecipeFromText(body.text)
       return NextResponse.json(recipe)

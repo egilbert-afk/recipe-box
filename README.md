@@ -216,10 +216,9 @@ npm run dev
 
 | Issue | Layer | Notes |
 |-------|-------|-------|
-| `source_url` not validated server-side | 2 | API accepts any string; only the browser enforces `type="url"`. Add URL validation in the API route. |
-| No max-length validation on text inputs | 2 | Title, ingredient names, and step instructions are unbounded. Add limits before Layer 2. |
 | Dotdash Meredith sites return 403 | 2 | Simply Recipes, Serious Eats, Allrecipes, and The Spruce Eats block automated fetches despite browser headers. User sees a clear error message and can fall back to manual entry. No fix without a paid scraping service. |
-| Claude model version is one release behind | 2 | `lib/claude.ts` uses `claude-sonnet-4-20250514`; current Sonnet is `claude-sonnet-4-6`. Update when convenient. |
+| No server-side image data size limit | 3 | The UI enforces 5 MB per file, but the API route does not validate base64 payload size. Acceptable for now; revisit if the API is ever exposed publicly. |
+| Object URLs not revoked on mode switch | 3 | `URL.createObjectURL` previews are revoked when removed from the strip but not when the user switches capture modes. Browser cleans up on page unload; not a real-world issue for this app. |
 
 ---
 
