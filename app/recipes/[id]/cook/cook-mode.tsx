@@ -22,17 +22,35 @@ export function CookMode({ title, recipeId, baseServings, targetServings, ingred
   useEffect(() => {
     if (!('wakeLock' in navigator)) return
 
-    let released = false
+    let unmounted = false
 
-    navigator.wakeLock.request('screen').then((lock) => {
-      if (!released) wakeLockRef.current = lock
-      else lock.release()
-    }).catch(() => {
-      // Non-critical — wake lock may be unavailable if the page is hidden
-    })
+    const requestLock = async () => {
+      try {
+        const lock = await navigator.wakeLock.request('screen')
+        if (unmounted) {
+          // Component unmounted while the promise was in flight — release immediately
+          lock.release()
+          return
+        }
+        // Null the ref when the browser auto-releases (e.g. page hidden),
+        // so the cleanup handler doesn't try to release an already-released lock.
+        lock.addEventListener('release', () => { wakeLockRef.current = null })
+        wakeLockRef.current = lock
+      } catch {
+        // Non-critical — lock may be unavailable if the page is hidden
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') requestLock()
+    }
+
+    requestLock()
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
-      released = true
+      unmounted = true
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       wakeLockRef.current?.release()
       wakeLockRef.current = null
     }
@@ -56,6 +74,7 @@ export function CookMode({ title, recipeId, baseServings, targetServings, ingred
       <div className="border-b border-gray-200">
         <button
           onClick={() => setIngredientsOpen((o) => !o)}
+          aria-expanded={ingredientsOpen}
           className="flex items-center justify-between w-full px-4 py-4 text-base font-semibold text-left"
         >
           <span>

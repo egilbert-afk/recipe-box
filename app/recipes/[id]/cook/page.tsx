@@ -27,7 +27,7 @@ export default async function CookPage({
     supabase.from('steps').select('*').eq('recipe_id', id).order('order_index'),
   ])
 
-  const parsed = parseInt(servingsParam ?? '')
+  const parsed = parseInt(servingsParam ?? '', 10)
   const targetServings = Number.isFinite(parsed) && parsed >= 1 && parsed <= 20
     ? parsed
     : recipe.servings
