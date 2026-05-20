@@ -219,6 +219,7 @@ npm run dev
 | Dotdash Meredith sites return 403 | 2 | Simply Recipes, Serious Eats, Allrecipes, and The Spruce Eats block automated fetches despite browser headers. User sees a clear error message and can fall back to manual entry. No fix without a paid scraping service. |
 | No server-side image data size limit | 3 | The UI enforces 5 MB per file, but the API route does not validate base64 payload size. Acceptable for now; revisit if the API is ever exposed publicly. |
 | Object URLs not revoked on mode switch | 3 | `URL.createObjectURL` previews are revoked when removed from the strip but not when the user switches capture modes. Browser cleans up on page unload; not a real-world issue for this app. |
+| Ingredient search matches word fragments in compound ingredients | 4 | Searching "chicken" returns recipes that only contain "chicken stock" because full-text search splits ingredient names into individual lexemes. Ideal fix is phrase-aware matching, but most recipe apps have the same behavior. Revisit once there are enough recipes to know how often it's a real problem. |
 
 ---
 
