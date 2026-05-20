@@ -233,3 +233,6 @@ npm run dev
 - "Cook this again" history — track which recipes you've actually made
 - Rating system — star ratings after cooking
 - Personal domain email ingestion (upgrade from Gmail)
+- Salad as a meal type — currently has no natural home; fits between Side and Entrée depending on the recipe
+- Inferred prep steps — when Claude parses a recipe, detect ingredients that imply prep work (e.g. "minced garlic," "diced onion") and surface those as steps if the recipe doesn't already list them
+- Multi-component recipes — some recipes have distinct sub-recipes (e.g. fish tacos: slaw + fish preparation); support grouping ingredients and steps by component with a label for each
