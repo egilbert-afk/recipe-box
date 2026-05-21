@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../scripts'))
-from poll_gmail import extract_urls, url_already_exists, parse_and_save
+from poll_gmail import extract_urls, is_likely_recipe_url, url_already_exists, parse_and_save
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -85,6 +85,32 @@ class TestExtractUrls:
         assert 'https://cooking.nytimes.com/recipes/1234.' not in urls
 
 
+# ── is_likely_recipe_url ─────────────────────────────────────────────────────
+
+class TestIsLikelyRecipeUrl:
+    def test_accepts_recipe_page_url(self):
+        assert is_likely_recipe_url('https://cooking.nytimes.com/recipes/1234') is True
+
+    def test_rejects_png_image(self):
+        assert is_likely_recipe_url('https://example.com/photo.png') is False
+
+    def test_rejects_jpeg_image(self):
+        assert is_likely_recipe_url('https://example.com/photo.jpg') is False
+
+    def test_rejects_svg(self):
+        assert is_likely_recipe_url('https://example.com/icon.svg') is False
+
+    def test_rejects_pdf(self):
+        assert is_likely_recipe_url('https://example.com/menu.pdf') is False
+
+    def test_accepts_url_with_extension_in_path_segment(self):
+        # .jpg appears mid-path, not at the end — should not be filtered
+        assert is_likely_recipe_url('https://example.com/images.jpg/pasta-recipe') is True
+
+    def test_rejects_image_url_with_query_string(self):
+        assert is_likely_recipe_url('https://example.com/photo.png?w=800') is False
+
+
 # ── url_already_exists ────────────────────────────────────────────────────────
 
 class TestUrlAlreadyExists:
@@ -121,6 +147,15 @@ class TestParseAndSave:
         mock_post.return_value.status_code = 422
         mock_post.return_value.content = b'error'
         mock_post.return_value.json.return_value = {'error': 'Failed to fetch page'}
+        with pytest.raises(RuntimeError, match='Parse failed'):
+            parse_and_save('https://example.com/recipe', BASE_URL)
+
+    @patch('poll_gmail.requests.post')
+    def test_raises_on_parse_failure_with_non_json_body(self, mock_post):
+        mock_post.return_value.ok = False
+        mock_post.return_value.status_code = 502
+        mock_post.return_value.text = 'Bad Gateway'
+        mock_post.return_value.json.side_effect = ValueError('No JSON')
         with pytest.raises(RuntimeError, match='Parse failed'):
             parse_and_save('https://example.com/recipe', BASE_URL)
 
