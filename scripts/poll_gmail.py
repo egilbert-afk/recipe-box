@@ -29,6 +29,12 @@ IMAP_HOST = 'imap.gmail.com'
 LABEL_PROCESSED = 'recipe-processed'
 LABEL_FAILED = 'recipe-failed'
 URL_PATTERN = re.compile(r'https?://[^\s<>"\')\]]+')
+MEDIA_EXTENSION = re.compile(r'\.(png|jpe?g|gif|svg|webp|ico|pdf|mp4|mp3|zip)(\?|#|$)', re.IGNORECASE)
+
+
+def is_likely_recipe_url(url):
+    """Return False for URLs that clearly point to media files rather than recipe pages."""
+    return not MEDIA_EXTENSION.search(url)
 
 
 def extract_urls(msg):
@@ -89,7 +95,10 @@ def parse_and_save(source_url, base_url):
         timeout=60,
     )
     if not parse_resp.ok:
-        error = parse_resp.json().get('error', parse_resp.text) if parse_resp.content else parse_resp.text
+        try:
+            error = parse_resp.json().get('error', parse_resp.text)
+        except ValueError:
+            error = parse_resp.text
         raise RuntimeError(f'Parse failed ({parse_resp.status_code}): {error}')
 
     recipe = parse_resp.json()
@@ -101,7 +110,10 @@ def parse_and_save(source_url, base_url):
         timeout=30,
     )
     if not save_resp.ok:
-        error = save_resp.json().get('error', save_resp.text) if save_resp.content else save_resp.text
+        try:
+            error = save_resp.json().get('error', save_resp.text)
+        except ValueError:
+            error = save_resp.text
         raise RuntimeError(f'Save failed ({save_resp.status_code}): {error}')
 
     return save_resp.json()
@@ -147,37 +159,40 @@ def poll():
         log.info('Found %d unread email(s).', len(uids))
 
         for uid in uids:
-            _, msg_data = mail.uid('FETCH', uid, '(RFC822)')
-            raw = msg_data[0][1]
-            msg = email.message_from_bytes(raw)
-            subject = msg.get('Subject', '(no subject)')
-            log.info('Processing: %s', subject)
+            try:
+                _, msg_data = mail.uid('FETCH', uid, '(RFC822)')
+                raw = msg_data[0][1]
+                msg = email.message_from_bytes(raw)
+                subject = msg.get('Subject', '(no subject)')
+                log.info('Processing: %s', subject)
 
-            urls = extract_urls(msg)
+                urls = [u for u in extract_urls(msg) if is_likely_recipe_url(u)]
 
-            if not urls:
-                log.info('  No URLs found — skipping.')
+                if not urls:
+                    log.info('  No recipe URLs found — skipping.')
+                    mail.uid('STORE', uid, '+FLAGS', '\\Seen')
+                    continue
+
+                saved = False
+                for url in urls:
+                    if url_already_exists(url, supabase_url, supabase_key):
+                        log.info('  Already in database: %s', url)
+                        saved = True
+                        break
+                    log.info('  Trying: %s', url)
+                    try:
+                        result = parse_and_save(url, base_url)
+                        log.info('  Saved: %s', result.get('title', url))
+                        saved = True
+                        break
+                    except RuntimeError as exc:
+                        log.warning('  Failed: %s', exc)
+
                 mail.uid('STORE', uid, '+FLAGS', '\\Seen')
-                continue
-
-            saved = False
-            for url in urls:
-                if url_already_exists(url, supabase_url, supabase_key):
-                    log.info('  Already in database: %s', url)
-                    saved = True
-                    break
-                log.info('  Trying: %s', url)
-                try:
-                    result = parse_and_save(url, base_url)
-                    log.info('  Saved: %s', result.get('title', url))
-                    saved = True
-                    break
-                except RuntimeError as exc:
-                    log.warning('  Failed: %s', exc)
-
-            mail.uid('STORE', uid, '+FLAGS', '\\Seen')
-            apply_label(mail, uid, LABEL_PROCESSED if saved else LABEL_FAILED)
-            log.info('  Labeled: %s', LABEL_PROCESSED if saved else LABEL_FAILED)
+                apply_label(mail, uid, LABEL_PROCESSED if saved else LABEL_FAILED)
+                log.info('  Labeled: %s', LABEL_PROCESSED if saved else LABEL_FAILED)
+            except Exception as exc:
+                log.error('  Unexpected error processing email uid=%s: %s', uid, exc)
 
     finally:
         mail.logout()
