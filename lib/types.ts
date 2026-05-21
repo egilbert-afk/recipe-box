@@ -15,7 +15,8 @@ export type MealTypeId =
   | 'dessert'
   | 'cocktail'
 
-export type CaptureMethod = 'manual' | 'url' | 'document' | 'email' | 'text_paste'
+export const CAPTURE_METHODS = ['manual', 'url', 'document', 'email', 'text_paste'] as const
+export type CaptureMethod = typeof CAPTURE_METHODS[number]
 
 export interface Cuisine {
   id: CuisineId
@@ -79,6 +80,7 @@ export interface CreateRecipeInput {
   meal_type_id: MealTypeId
   source_url?: string
   servings: number
+  capture_method?: CaptureMethod
   ingredients: Array<{
     name: string
     amount: number | null

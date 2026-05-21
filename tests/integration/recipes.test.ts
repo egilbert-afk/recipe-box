@@ -132,6 +132,26 @@ describe('POST /api/recipes — success', () => {
     const res = await POST(makeRequest(validRecipeBody))
     expect(res.status).toBe(201)
   })
+
+  it('uses capture_method from the request body when valid', async () => {
+    const chain = mockChain({ data: { id: 'abc-123', title: 'Test' }, error: null })
+
+    await POST(makeRequest({ ...validRecipeBody, capture_method: 'email' }))
+
+    expect(chain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ capture_method: 'email' })
+    )
+  })
+
+  it('defaults capture_method to manual when an unrecognised value is provided', async () => {
+    const chain = mockChain({ data: { id: 'abc-123', title: 'Test' }, error: null })
+
+    await POST(makeRequest({ ...validRecipeBody, capture_method: 'hacked' }))
+
+    expect(chain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ capture_method: 'manual' })
+    )
+  })
 })
 
 describe('GET /api/recipes', () => {
