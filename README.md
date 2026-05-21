@@ -228,7 +228,7 @@ npm run dev
 ## Future ideas
 
 - iOS Share Sheet extension for one-tap capture from Safari
-- Photo capture — snap a recipe card or handwritten recipe
+- Photo capture (polished) — basic photo upload already works via the document mode; this would add a dedicated camera button that skips the file picker, opening the camera directly for a more native feel
 - Meal planning — pick recipes for the week and generate a shopping list
 - "Cook this again" history — track which recipes you've actually made
 - Rating system — star ratings after cooking
@@ -236,3 +236,5 @@ npm run dev
 - Salad as a meal type — currently has no natural home; fits between Side and Entrée depending on the recipe
 - Inferred prep steps — when Claude parses a recipe, detect ingredients that imply prep work (e.g. "minced garlic," "diced onion") and surface those as steps if the recipe doesn't already list them
 - Multi-component recipes — some recipes have distinct sub-recipes (e.g. fish tacos: slaw + fish preparation); support grouping ingredients and steps by component with a label for each
+- Filter views — filter the recipe list by cuisine or meal type without a text search; quick-tap buttons on the browse page
+- PWA home screen — add a web app manifest and meta tags so the app can be pinned to the iOS/Android home screen and launches without browser chrome
