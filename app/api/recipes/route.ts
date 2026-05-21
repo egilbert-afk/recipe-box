@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { sortTitle } from '@/lib/formatters'
-import type { CreateRecipeInput, CaptureMethod } from '@/lib/types'
-import { CAPTURE_METHODS } from '@/lib/types'
+import { CAPTURE_METHODS, type CreateRecipeInput, type CaptureMethod } from '@/lib/types'
 
 export async function GET() {
   const { data, error } = await supabase

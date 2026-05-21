@@ -222,6 +222,7 @@ npm run dev
 | Ingredient search matches word fragments in compound ingredients | 4 | Searching "chicken" returns recipes that only contain "chicken stock" because full-text search splits ingredient names into individual lexemes. Ideal fix is phrase-aware matching, but most recipe apps have the same behavior. Revisit once there are enough recipes to know how often it's a real problem. |
 | Cook route fetches all recipe columns | 5 | `cook/page.tsx` uses `select('*')` but only needs `title` and `servings`. Harmless for a personal app; tighten the select if the route ever becomes a performance concern. |
 | Buttons missing explicit `type="button"` | 5 | `ServingsPicker` and `CookMode` buttons have no `type` attribute. No current risk (none are inside a form), but explicit `type="button"` prevents accidental submit behavior if these components are ever reused inside a form. |
+| Email URL order is non-deterministic | 6 | `extract_urls` returns from a set, so when a forwarded email contains multiple URLs, the order they're tried varies between runs. Irrelevant for single-link emails (the common case); revisit if it causes problems in practice. |
 
 ---
 
