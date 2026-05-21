@@ -136,51 +136,52 @@ def poll():
     mail.select('INBOX')
     ensure_labels(mail)
 
-    _, data = mail.uid('SEARCH', None, 'UNSEEN')
-    uids = data[0].split() if data[0] else []
+    try:
+        _, data = mail.uid('SEARCH', None, 'UNSEEN')
+        uids = data[0].split() if data[0] else []
 
-    if not uids:
-        log.info('No unread emails.')
-        mail.logout()
-        return
+        if not uids:
+            log.info('No unread emails.')
+            return
 
-    log.info('Found %d unread email(s).', len(uids))
+        log.info('Found %d unread email(s).', len(uids))
 
-    for uid in uids:
-        _, msg_data = mail.uid('FETCH', uid, '(RFC822)')
-        raw = msg_data[0][1]
-        msg = email.message_from_bytes(raw)
-        subject = msg.get('Subject', '(no subject)')
-        log.info('Processing: %s', subject)
+        for uid in uids:
+            _, msg_data = mail.uid('FETCH', uid, '(RFC822)')
+            raw = msg_data[0][1]
+            msg = email.message_from_bytes(raw)
+            subject = msg.get('Subject', '(no subject)')
+            log.info('Processing: %s', subject)
 
-        urls = extract_urls(msg)
+            urls = extract_urls(msg)
 
-        if not urls:
-            log.info('  No URLs found — skipping.')
+            if not urls:
+                log.info('  No URLs found — skipping.')
+                mail.uid('STORE', uid, '+FLAGS', '\\Seen')
+                continue
+
+            saved = False
+            for url in urls:
+                if url_already_exists(url, supabase_url, supabase_key):
+                    log.info('  Already in database: %s', url)
+                    saved = True
+                    break
+                log.info('  Trying: %s', url)
+                try:
+                    result = parse_and_save(url, base_url)
+                    log.info('  Saved: %s', result.get('title', url))
+                    saved = True
+                    break
+                except RuntimeError as exc:
+                    log.warning('  Failed: %s', exc)
+
             mail.uid('STORE', uid, '+FLAGS', '\\Seen')
-            continue
+            apply_label(mail, uid, LABEL_PROCESSED if saved else LABEL_FAILED)
+            log.info('  Labeled: %s', LABEL_PROCESSED if saved else LABEL_FAILED)
 
-        saved = False
-        for url in urls:
-            if url_already_exists(url, supabase_url, supabase_key):
-                log.info('  Already in database: %s', url)
-                saved = True
-                break
-            log.info('  Trying: %s', url)
-            try:
-                result = parse_and_save(url, base_url)
-                log.info('  Saved: %s', result.get('title', url))
-                saved = True
-                break
-            except RuntimeError as exc:
-                log.warning('  Failed: %s', exc)
-
-        mail.uid('STORE', uid, '+FLAGS', '\\Seen')
-        apply_label(mail, uid, LABEL_PROCESSED if saved else LABEL_FAILED)
-        log.info('  Labeled: %s', LABEL_PROCESSED if saved else LABEL_FAILED)
-
-    mail.logout()
-    log.info('Done.')
+    finally:
+        mail.logout()
+        log.info('Done.')
 
 
 if __name__ == '__main__':
