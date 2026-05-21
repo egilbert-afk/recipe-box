@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { sortTitle } from '@/lib/formatters'
-import type { CreateRecipeInput } from '@/lib/types'
+import type { CreateRecipeInput, CaptureMethod } from '@/lib/types'
+import { CAPTURE_METHODS } from '@/lib/types'
 
 export async function GET() {
   const { data, error } = await supabase
@@ -75,6 +76,11 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const captureMethod: CaptureMethod =
+    body.capture_method && CAPTURE_METHODS.includes(body.capture_method)
+      ? body.capture_method
+      : 'manual'
+
   const { data: recipe, error: recipeError } = await supabase
     .from('recipes')
     .insert({
@@ -83,7 +89,7 @@ export async function POST(request: NextRequest) {
       meal_type_id: body.meal_type_id,
       source_url: body.source_url || null,
       servings: body.servings,
-      capture_method: 'manual',
+      capture_method: captureMethod,
     })
     .select()
     .single()
