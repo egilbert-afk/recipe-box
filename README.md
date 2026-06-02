@@ -232,8 +232,11 @@ npm run dev
 - iOS Share Sheet extension for one-tap capture from Safari
 - Photo capture (polished) — basic photo upload already works via the document mode; this would add a dedicated camera button that skips the file picker, opening the camera directly for a more native feel
 - Meal planning — pick recipes for the week and generate a shopping list
+- Grocery list with price comparison — generate a shopping list from a recipe or meal plan and surface where each ingredient is cheapest (Instacart, Kroger, Whole Foods APIs, etc.)
+- Recipe sharing — share individual recipes with people outside your household via a link or in-app invite
 - "Cook this again" history — track which recipes you've actually made
 - Rating system — star ratings after cooking
+- Friendlier error messages — tailor error copy for end users rather than developers (e.g. when a site blocks parsing, suggest the copy-paste fallback more clearly)
 - Email text ingestion — if a forwarded email contains no URL, treat the body as raw recipe text and parse it via Claude; useful for sites that block automated fetching or recipes shared as plain text
 - Personal domain email ingestion (upgrade from Gmail)
 - Salad as a meal type — currently has no natural home; fits between Side and Entrée depending on the recipe
