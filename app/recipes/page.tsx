@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
 import { sortTitle } from '@/lib/formatters'
 import { parseSearchQuery } from '@/lib/search'
@@ -24,6 +24,7 @@ export default async function RecipesPage({
   const query = q?.trim() ?? ''
   const tsquery = query ? parseSearchQuery(query) : ''
 
+  const supabase = await createSupabaseServerClient()
   let recipes: RecipeListItem[] = []
   let loadError = ''
 

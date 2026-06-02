@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
 import type { RecipeWithDetails } from '@/lib/types'
 import { formatIngredient } from '@/lib/formatters'
@@ -12,6 +12,7 @@ export default async function RecipePage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const supabase = await createSupabaseServerClient()
 
   const { data: recipe, error: recipeError } = await supabase
     .from('recipes')
