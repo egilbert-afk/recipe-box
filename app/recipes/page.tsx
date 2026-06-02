@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { SignOutButton } from '@/components/SignOutButton'
 import { CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
 import { sortTitle } from '@/lib/formatters'
 import { parseSearchQuery } from '@/lib/search'
@@ -50,12 +51,15 @@ export default async function RecipesPage({
     <div className="min-h-screen bg-white">
       <header className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
         <h1 className="text-xl font-semibold">Recipe Box</h1>
-        <Link
-          href="/add"
-          className="flex items-center justify-center h-12 px-5 rounded-full bg-black text-white text-sm font-medium"
-        >
-          Add Recipe
-        </Link>
+        <div className="flex items-center gap-1">
+          <SignOutButton />
+          <Link
+            href="/add"
+            className="flex items-center justify-center h-12 px-5 rounded-full bg-black text-white text-sm font-medium"
+          >
+            Add Recipe
+          </Link>
+        </div>
       </header>
 
       <main className="px-4 py-4 space-y-4">
