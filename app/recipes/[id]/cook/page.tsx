@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { CookMode } from './cook-mode'
 
 export default async function CookPage({
@@ -11,6 +11,7 @@ export default async function CookPage({
 }) {
   const { id } = await params
   const { servings: servingsParam } = await searchParams
+  const supabase = await createSupabaseServerClient()
 
   const { data: recipe, error: recipeError } = await supabase
     .from('recipes')
