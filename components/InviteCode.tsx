@@ -12,9 +12,13 @@ export function InviteCode({ initialCode }: Props) {
   const [isPending, startTransition] = useTransition()
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard access denied — user can copy the code manually
+    }
   }
 
   function handleRegenerate() {
