@@ -224,6 +224,7 @@ npm run dev
 | Buttons missing explicit `type="button"` | 5 | `ServingsPicker` and `CookMode` buttons have no `type` attribute. No current risk (none are inside a form), but explicit `type="button"` prevents accidental submit behavior if these components are ever reused inside a form. |
 | Email URL order is non-deterministic | 6 | `extract_urls` returns from a set, so when a forwarded email contains multiple URLs, the order they're tried varies between runs. Irrelevant for single-link emails (the common case); revisit if it causes problems in practice. |
 | No test for non-JSON save response in polling script | 6 | `parse_and_save` applies the same `try/except ValueError` guard to both the parse and save responses, but only the parse path has a dedicated test for the non-JSON case. The code paths are structurally identical so the risk is low. |
+| No runtime type guard on archive_note in PATCH handler | 8 | `typeof body.archive_note` is not validated before calling `.length` and `.trim()`. A non-string value would produce a 500 instead of a 400. Not reachable via the UI; low priority for a personal app. |
 
 ---
 
@@ -232,8 +233,11 @@ npm run dev
 - iOS Share Sheet extension for one-tap capture from Safari
 - Photo capture (polished) — basic photo upload already works via the document mode; this would add a dedicated camera button that skips the file picker, opening the camera directly for a more native feel
 - Meal planning — pick recipes for the week and generate a shopping list
+- Grocery list with price comparison — generate a shopping list from a recipe or meal plan and surface where each ingredient is cheapest (Instacart, Kroger, Whole Foods APIs, etc.)
+- Recipe sharing — share individual recipes with people outside your household via a link or in-app invite
 - "Cook this again" history — track which recipes you've actually made
 - Rating system — star ratings after cooking
+- Friendlier error messages — tailor error copy for end users rather than developers (e.g. when a site blocks parsing, suggest the copy-paste fallback more clearly)
 - Email text ingestion — if a forwarded email contains no URL, treat the body as raw recipe text and parse it via Claude; useful for sites that block automated fetching or recipes shared as plain text
 - Personal domain email ingestion (upgrade from Gmail)
 - Salad as a meal type — currently has no natural home; fits between Side and Entrée depending on the recipe
