@@ -1,12 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { sortTitle } from '@/lib/formatters'
 import { CAPTURE_METHODS, type CreateRecipeInput, type CaptureMethod } from '@/lib/types'
 
 export async function GET() {
+  const serverClient = await createSupabaseServerClient()
+  const { data: { user } } = await serverClient.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { data: membership } = await supabase
+    .from('household_members')
+    .select('household_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!membership) {
+    return NextResponse.json({ error: 'No household found' }, { status: 404 })
+  }
+
   const { data, error } = await supabase
     .from('recipes')
     .select('id, title, cuisine_id, meal_type_id, source_url, servings, capture_method, created_at, updated_at')
+    .eq('household_id', membership.household_id)
     .eq('archived', false)
 
   if (error) {
@@ -21,6 +39,22 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const serverClient = await createSupabaseServerClient()
+  const { data: { user } } = await serverClient.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { data: membership } = await supabase
+    .from('household_members')
+    .select('household_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!membership) {
+    return NextResponse.json({ error: 'No household found' }, { status: 404 })
+  }
+
   let body: CreateRecipeInput
 
   try {
@@ -89,6 +123,8 @@ export async function POST(request: NextRequest) {
       source_url: body.source_url || null,
       servings: body.servings,
       capture_method: captureMethod,
+      household_id: membership.household_id,
+      created_by: user.id,
     })
     .select()
     .single()

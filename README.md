@@ -237,6 +237,8 @@ npm run dev
 | No runtime type guard on archive_note in PATCH handler | 8 | `typeof body.archive_note` is not validated before calling `.length` and `.trim()`. A non-string value would produce a 500 instead of a 400. Not reachable via the UI; low priority for a personal app. |
 | No rate limiting on invite code join attempts | 9 | `POST /api/households/join` has no rate limiting. With 16^8 (~4 billion) possible codes brute force is impractical at beta scale, but rate limiting should be added before a public launch. |
 | `invited_by` missing ON DELETE SET NULL | 9 | `household_members.invited_by` references `auth.users(id)` with no ON DELETE behavior. Deleting an auth user who has invited others would fail with a constraint violation. Fix: `ALTER TABLE household_members ALTER COLUMN invited_by SET DEFAULT NULL` + a new migration adding `ON DELETE SET NULL`. Low risk — Supabase rarely hard-deletes auth users. |
+| Parse routes have no auth check | 9 | `POST /api/parse` and `POST /api/parse-document` call the Claude API without authenticating the caller. Anyone who discovers these endpoints can trigger paid API calls. Low risk while the app is private, but auth should be added before any public exposure. |
+| Auth + membership lookup repeated across 5 routes | 9 | `getUser()` + `household_members` lookup is duplicated in every recipe route. Extract to a shared helper (e.g. `getAuthenticatedMembership()`) during the Layer 12 polish pass. |
 
 ---
 

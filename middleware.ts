@@ -35,6 +35,22 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Authenticated users with no household are sent to onboarding.
+  // Skip this check for /onboarding itself and /auth routes.
+  if (user && !pathname.startsWith('/onboarding') && !pathname.startsWith('/auth')) {
+    const { data: membership } = await supabase
+      .from('household_members')
+      .select('household_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!membership) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/onboarding'
+      return NextResponse.redirect(url)
+    }
+  }
+
   return supabaseResponse
 }
 
