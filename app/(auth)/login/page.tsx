@@ -63,7 +63,7 @@ export default async function LoginPage({
           <p className="text-sm text-gray-500">
             Have an invite code?{' '}
             <a href="/signup" className="text-gray-900 underline">
-              Join a household
+              Create an account to join
             </a>
           </p>
         </div>
