@@ -52,6 +52,12 @@ export default async function RecipesPage({
       <header className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
         <h1 className="text-xl font-semibold">Recipe Box</h1>
         <div className="flex items-center gap-1">
+          <Link
+            href="/archive"
+            className="flex items-center justify-center h-12 px-4 text-sm text-gray-500 hover:text-gray-900"
+          >
+            Archived
+          </Link>
           <SignOutButton />
           <Link
             href="/add"

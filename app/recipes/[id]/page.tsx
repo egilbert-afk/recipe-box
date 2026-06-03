@@ -5,6 +5,7 @@ import { CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
 import type { RecipeWithDetails } from '@/lib/types'
 import { formatIngredient } from '@/lib/formatters'
 import { ServingsPicker } from '@/components/ServingsPicker'
+import { ArchiveButton } from '@/components/ArchiveButton'
 
 export default async function RecipePage({
   params,
@@ -98,6 +99,8 @@ export default async function RecipePage({
             ))}
           </ol>
         </section>
+
+        <ArchiveButton recipeId={full.id} archived={full.archived} />
       </main>
     </div>
   )
