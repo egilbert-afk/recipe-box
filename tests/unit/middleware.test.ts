@@ -3,10 +3,16 @@ import { NextRequest } from 'next/server'
 import { middleware } from '@/middleware'
 
 const mockGetUser = vi.fn()
+const mockMaybeSingle = vi.fn()
 
 vi.mock('@supabase/ssr', () => ({
   createServerClient: vi.fn(() => ({
     auth: { getUser: mockGetUser },
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: mockMaybeSingle,
+    })),
   })),
 }))
 
@@ -14,13 +20,23 @@ function makeRequest(pathname: string) {
   return new NextRequest(`http://localhost${pathname}`)
 }
 
+// Sets up the household membership mock for authenticated users.
+function withHousehold() {
+  mockMaybeSingle.mockResolvedValue({ data: { household_id: 'hh-1' }, error: null })
+}
+
+function withoutHousehold() {
+  mockMaybeSingle.mockResolvedValue({ data: null, error: null })
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('middleware — authenticated user', () => {
-  it('passes through requests when a user is present', async () => {
+describe('middleware — authenticated user with household', () => {
+  it('passes through requests when a user has a household', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } } })
+    withHousehold()
 
     const res = await middleware(makeRequest('/recipes'))
 
@@ -29,10 +45,42 @@ describe('middleware — authenticated user', () => {
 
   it('passes through requests to any protected route', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } } })
+    withHousehold()
 
     const res = await middleware(makeRequest('/recipes/abc-123/cook'))
 
     expect(res.status).toBe(200)
+  })
+})
+
+describe('middleware — authenticated user without household', () => {
+  it('redirects to /onboarding when user has no household', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } } })
+    withoutHousehold()
+
+    const res = await middleware(makeRequest('/recipes'))
+
+    expect(res.status).toBe(307)
+    expect(res.headers.get('location')).toBe('http://localhost/onboarding')
+  })
+
+  it('passes through /onboarding without redirecting (no infinite loop)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } } })
+
+    const res = await middleware(makeRequest('/onboarding'))
+
+    // Household check is skipped for /onboarding — mockMaybeSingle not called.
+    expect(res.status).toBe(200)
+    expect(mockMaybeSingle).not.toHaveBeenCalled()
+  })
+
+  it('passes through /auth routes without a household check', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } } })
+
+    const res = await middleware(makeRequest('/auth/callback'))
+
+    expect(res.status).toBe(200)
+    expect(mockMaybeSingle).not.toHaveBeenCalled()
   })
 })
 
