@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+
+  const serverClient = await createSupabaseServerClient()
+  const { data: { user } } = await serverClient.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { data: membership } = await supabase
+    .from('household_members')
+    .select('household_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!membership) {
+    return NextResponse.json({ error: 'No household found' }, { status: 404 })
+  }
 
   let body: { archived: boolean; archive_note?: string | null }
   try {
@@ -29,6 +46,7 @@ export async function PATCH(
     .from('recipes')
     .update({ archived: body.archived, archive_note })
     .eq('id', id)
+    .eq('household_id', membership.household_id)
     .select('id, title, archived, archive_note')
     .single()
 
@@ -48,10 +66,27 @@ export async function GET(
 ) {
   const { id } = await params
 
+  const serverClient = await createSupabaseServerClient()
+  const { data: { user } } = await serverClient.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { data: membership } = await supabase
+    .from('household_members')
+    .select('household_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!membership) {
+    return NextResponse.json({ error: 'No household found' }, { status: 404 })
+  }
+
   const { data: recipe, error: recipeError } = await supabase
     .from('recipes')
     .select('*')
     .eq('id', id)
+    .eq('household_id', membership.household_id)
     .single()
 
   if (recipeError) {
