@@ -134,6 +134,16 @@ Each layer is fully tested and working before the next begins.
 | 6 | Email ingestion — Gmail polling, URL extraction, auto-add |
 | 7 | Supabase auth — login for primary user and spouse |
 | 8 | Archive and notes — soft delete with reason |
+| 9 | Household model — multi-tenant accounts, invite codes, cook sessions, onboarding flow |
+| 10 | In-app feedback button |
+| 11 | PWA manifest + Share Sheet integration |
+| 12 | UI polish pass |
+| 13 | Implied prep steps — Claude surfaces mincing/chopping from ingredient lists |
+| 14 | Cook history and ratings UI |
+| 15 | Meal planning and shopping list |
+| 16 | Stripe + subscription + free tier enforcement |
+| 17 | Social login — Apple and Google |
+| 18 | Seasonal suggestions and personal cook time estimates |
 
 ---
 
@@ -225,6 +235,8 @@ npm run dev
 | Email URL order is non-deterministic | 6 | `extract_urls` returns from a set, so when a forwarded email contains multiple URLs, the order they're tried varies between runs. Irrelevant for single-link emails (the common case); revisit if it causes problems in practice. |
 | No test for non-JSON save response in polling script | 6 | `parse_and_save` applies the same `try/except ValueError` guard to both the parse and save responses, but only the parse path has a dedicated test for the non-JSON case. The code paths are structurally identical so the risk is low. |
 | No runtime type guard on archive_note in PATCH handler | 8 | `typeof body.archive_note` is not validated before calling `.length` and `.trim()`. A non-string value would produce a 500 instead of a 400. Not reachable via the UI; low priority for a personal app. |
+| No rate limiting on invite code join attempts | 9 | `POST /api/households/join` has no rate limiting. With 16^8 (~4 billion) possible codes brute force is impractical at beta scale, but rate limiting should be added before a public launch. |
+| `invited_by` missing ON DELETE SET NULL | 9 | `household_members.invited_by` references `auth.users(id)` with no ON DELETE behavior. Deleting an auth user who has invited others would fail with a constraint violation. Fix: `ALTER TABLE household_members ALTER COLUMN invited_by SET DEFAULT NULL` + a new migration adding `ON DELETE SET NULL`. Low risk — Supabase rarely hard-deletes auth users. |
 
 ---
 
