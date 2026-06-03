@@ -1,16 +1,19 @@
-import { signIn } from '../actions'
+import { signUp } from '../actions'
 
-export default async function LoginPage({
+export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; message?: string }>
 }) {
-  const { error } = await searchParams
+  const { error, message } = await searchParams
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-4">
       <div className="w-full max-w-sm space-y-8">
-        <h1 className="text-2xl font-semibold text-center">Recipe Box</h1>
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold">Recipe Box</h1>
+          <p className="text-gray-500 mt-1 text-sm">Create your account</p>
+        </div>
 
         {error && (
           <p className="text-sm text-red-600 text-center bg-red-50 border border-red-200 rounded-xl px-4 py-3">
@@ -18,7 +21,13 @@ export default async function LoginPage({
           </p>
         )}
 
-        <form action={signIn} className="space-y-4">
+        {message && (
+          <p className="text-sm text-gray-700 text-center bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+            {message}
+          </p>
+        )}
+
+        <form action={signUp} className="space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email
@@ -41,7 +50,20 @@ export default async function LoginPage({
               name="password"
               type="password"
               required
-              autoComplete="current-password"
+              autoComplete="new-password"
+              className="w-full h-12 px-4 border border-gray-300 rounded-xl text-base"
+            />
+          </div>
+          <div>
+            <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 mb-1">
+              Confirm password
+            </label>
+            <input
+              id="confirm_password"
+              name="confirm_password"
+              type="password"
+              required
+              autoComplete="new-password"
               className="w-full h-12 px-4 border border-gray-300 rounded-xl text-base"
             />
           </div>
@@ -49,24 +71,16 @@ export default async function LoginPage({
             type="submit"
             className="w-full h-12 rounded-full bg-black text-white text-sm font-medium"
           >
-            Sign in
+            Create account
           </button>
         </form>
 
-        <div className="text-center space-y-2">
-          <p className="text-sm text-gray-500">
-            New to Recipe Box?{' '}
-            <a href="/signup" className="text-gray-900 underline">
-              Create an account
-            </a>
-          </p>
-          <p className="text-sm text-gray-500">
-            Have an invite code?{' '}
-            <a href="/signup" className="text-gray-900 underline">
-              Create an account to join
-            </a>
-          </p>
-        </div>
+        <p className="text-center text-sm text-gray-500">
+          Already have an account?{' '}
+          <a href="/login" className="text-gray-900 underline">
+            Sign in
+          </a>
+        </p>
       </div>
     </div>
   )

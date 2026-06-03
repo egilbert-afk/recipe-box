@@ -107,6 +107,14 @@ describe('middleware — unauthenticated user', () => {
     expect(res.status).toBe(200)
   })
 
+  it('passes through /signup without redirecting', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+
+    const res = await middleware(makeRequest('/signup'))
+
+    expect(res.status).toBe(200)
+  })
+
   it('passes through /auth routes (e.g. the callback handler)', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
 
