@@ -239,6 +239,7 @@ npm run dev
 | `invited_by` missing ON DELETE SET NULL | 9 | `household_members.invited_by` references `auth.users(id)` with no ON DELETE behavior. Deleting an auth user who has invited others would fail with a constraint violation. Fix: `ALTER TABLE household_members ALTER COLUMN invited_by SET DEFAULT NULL` + a new migration adding `ON DELETE SET NULL`. Low risk — Supabase rarely hard-deletes auth users. |
 | Parse routes have no auth check | 9 | `POST /api/parse` and `POST /api/parse-document` call the Claude API without authenticating the caller. Anyone who discovers these endpoints can trigger paid API calls. Low risk while the app is private, but auth should be added before any public exposure. |
 | Auth + membership lookup repeated across 5 routes | 9 | `getUser()` + `household_members` lookup is duplicated in every recipe route. Extract to a shared helper (e.g. `getAuthenticatedMembership()`) during the Layer 12 polish pass. |
+| Middleware creates a new service role client per request | 9 | `createClient` is called on every authenticated, non-exempt request in middleware. A module-level singleton would avoid repeated object allocation. Non-urgent at personal scale; revisit if middleware latency becomes noticeable. |
 
 ---
 
