@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
@@ -37,8 +38,16 @@ export async function middleware(request: NextRequest) {
 
   // Authenticated users with no household are sent to onboarding.
   // Skip this check for /onboarding itself and /auth routes.
+  // Uses service role client because the Edge runtime does not reliably forward
+  // the user JWT for non-auth DB queries, causing RLS to return nothing.
+  // user.id is already validated above via getUser(), so this is safe.
   if (user && !pathname.startsWith('/onboarding') && !pathname.startsWith('/auth')) {
-    const { data: membership } = await supabase
+    const serviceClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { data: membership } = await serviceClient
       .from('household_members')
       .select('household_id')
       .eq('user_id', user.id)
