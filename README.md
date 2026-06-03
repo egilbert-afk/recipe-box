@@ -224,6 +224,7 @@ npm run dev
 | Buttons missing explicit `type="button"` | 5 | `ServingsPicker` and `CookMode` buttons have no `type` attribute. No current risk (none are inside a form), but explicit `type="button"` prevents accidental submit behavior if these components are ever reused inside a form. |
 | Email URL order is non-deterministic | 6 | `extract_urls` returns from a set, so when a forwarded email contains multiple URLs, the order they're tried varies between runs. Irrelevant for single-link emails (the common case); revisit if it causes problems in practice. |
 | No test for non-JSON save response in polling script | 6 | `parse_and_save` applies the same `try/except ValueError` guard to both the parse and save responses, but only the parse path has a dedicated test for the non-JSON case. The code paths are structurally identical so the risk is low. |
+| No runtime type guard on archive_note in PATCH handler | 8 | `typeof body.archive_note` is not validated before calling `.length` and `.trim()`. A non-string value would produce a 500 instead of a 400. Not reachable via the UI; low priority for a personal app. |
 
 ---
 
