@@ -236,6 +236,7 @@ npm run dev
 | No test for non-JSON save response in polling script | 6 | `parse_and_save` applies the same `try/except ValueError` guard to both the parse and save responses, but only the parse path has a dedicated test for the non-JSON case. The code paths are structurally identical so the risk is low. |
 | No runtime type guard on archive_note in PATCH handler | 8 | `typeof body.archive_note` is not validated before calling `.length` and `.trim()`. A non-string value would produce a 500 instead of a 400. Not reachable via the UI; low priority for a personal app. |
 | No rate limiting on invite code join attempts | 9 | `POST /api/households/join` has no rate limiting. With 16^8 (~4 billion) possible codes brute force is impractical at beta scale, but rate limiting should be added before a public launch. |
+| `invited_by` missing ON DELETE SET NULL | 9 | `household_members.invited_by` references `auth.users(id)` with no ON DELETE behavior. Deleting an auth user who has invited others would fail with a constraint violation. Fix: `ALTER TABLE household_members ALTER COLUMN invited_by SET DEFAULT NULL` + a new migration adding `ON DELETE SET NULL`. Low risk — Supabase rarely hard-deletes auth users. |
 
 ---
 
