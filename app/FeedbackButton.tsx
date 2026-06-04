@@ -5,11 +5,12 @@ import { usePathname } from 'next/navigation'
 
 export default function FeedbackButton() {
   const pathname = usePathname()
-  // Suppress in cooking mode — the fixed button would overlap the Next step button
-  if (pathname?.endsWith('/cook')) return null
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+
+  // Suppress in cooking mode — the fixed button would overlap the Next step button
+  if (pathname?.endsWith('/cook')) return null
 
   async function submit() {
     if (!message.trim()) return
