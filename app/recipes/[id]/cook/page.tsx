@@ -15,7 +15,7 @@ export default async function CookPage({
 
   const { data: recipe, error: recipeError } = await supabase
     .from('recipes')
-    .select('*')
+    .select('id, title, servings')
     .eq('id', id)
     .single()
 

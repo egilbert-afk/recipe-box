@@ -1,10 +1,8 @@
 import Link from 'next/link'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { SignOutButton } from '@/components/SignOutButton'
-import { CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
+import { CUISINE_LABEL, MEAL_TYPE_LABEL, MEAL_TYPES } from '@/lib/constants'
 import { sortTitle } from '@/lib/formatters'
-import { parseSearchQuery } from '@/lib/search'
-import { trackEvent } from '@/lib/events'
 import type { CuisineId, MealTypeId } from '@/lib/types'
 
 type RecipeListItem = {
@@ -20,11 +18,10 @@ export const dynamic = 'force-dynamic'
 export default async function RecipesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ type?: string }>
 }) {
-  const { q } = await searchParams
-  const query = q?.trim() ?? ''
-  const tsquery = query ? parseSearchQuery(query) : ''
+  const { type } = await searchParams
+  const activeType = MEAL_TYPES.find((m) => m.id === type)?.id ?? null
 
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -37,96 +34,64 @@ export default async function RecipesPage({
   let recipes: RecipeListItem[] = []
   let loadError = ''
 
-  if (query && tsquery && membership) {
-    const { data, error } = await supabase.rpc('search_recipes_by_ingredient', {
-      query: tsquery,
-      p_household_id: membership.household_id,
-    })
-    if (error) loadError = error.message
-    else {
-      recipes = data ?? []
-      await trackEvent(user!.id, membership.household_id, 'search_performed', {
-        query_length: query.length,
-        result_count: recipes.length,
-      })
-    }
-  } else if (!query) {
-    const { data, error } = await supabase
+  if (membership) {
+    let query = supabase
       .from('recipes')
-      .select('id, title, cuisine_id, meal_type_id, servings, created_at')
+      .select('id, title, cuisine_id, meal_type_id, servings')
       .eq('archived', false)
+      .eq('household_id', membership.household_id)
+    if (activeType) query = query.eq('meal_type_id', activeType)
+    const { data, error } = await query
     if (error) loadError = error.message
     else recipes = [...(data ?? [])].sort((a, b) => sortTitle(a.title).localeCompare(sortTitle(b.title)))
   }
-  // query exists but tsquery is empty (all stopwords) → recipes stays []
 
   if (loadError) {
     return <p className="p-4 text-red-600">Failed to load recipes: {loadError}</p>
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pb-20">
       <header className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
         <h1 className="text-xl font-semibold">Recipe Box</h1>
-        <div className="flex items-center gap-1">
-          <Link
-            href="/archive"
-            className="flex items-center justify-center h-12 px-4 text-sm text-gray-500 hover:text-gray-900"
-          >
-            Archived
-          </Link>
-          <SignOutButton />
-          <Link
-            href="/add"
-            className="flex items-center justify-center h-12 px-5 rounded-full bg-black text-white text-sm font-medium"
-          >
-            Add Recipe
-          </Link>
-        </div>
+        <SignOutButton />
       </header>
 
       <main className="px-4 py-4 space-y-4">
-        {/* Search form */}
-        <form action="/recipes" method="GET" className="flex gap-2">
-          <input
-            name="q"
-            type="search"
-            defaultValue={query}
-            placeholder="Search by ingredient..."
-            className="flex-1 h-12 px-4 border border-gray-300 rounded-full text-base"
-          />
-          <button
-            type="submit"
-            className="h-12 px-5 rounded-full bg-black text-white text-sm font-medium"
-          >
-            Search
-          </button>
-        </form>
-
-        {/* Active search context */}
-        {query && (
-          <div className="flex items-center justify-between text-sm text-gray-500">
-            <span>
-              {recipes.length === 0
-                ? `No results for "${query}"`
-                : `${recipes.length} recipe${recipes.length === 1 ? '' : 's'} with "${query}"`}
-            </span>
-            <Link href="/recipes" className="text-black underline underline-offset-2">
-              Clear
-            </Link>
-          </div>
-        )}
+        {/* Meal type filter chips */}
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+          {[{ id: null, label: 'All' }, ...MEAL_TYPES].map((m) => {
+            const isActive = m.id === activeType
+            return (
+              <Link
+                key={m.id ?? 'all'}
+                href={m.id ? `/recipes?type=${m.id}` : '/recipes'}
+                className={`flex-shrink-0 h-9 px-4 rounded-full text-sm font-medium flex items-center ${
+                  isActive
+                    ? 'bg-black text-white'
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {m.label}
+              </Link>
+            )
+          })}
+        </div>
 
         {/* Recipe list */}
-        {!query && recipes.length === 0 ? (
+        {recipes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
-            <p className="text-gray-500 text-lg mb-6">No recipes yet.</p>
-            <Link
-              href="/add"
-              className="flex items-center justify-center h-12 px-6 rounded-full bg-black text-white text-sm font-medium"
-            >
-              Add your first recipe
-            </Link>
+            <p className="text-gray-500 text-lg mb-6">
+              {activeType ? `No ${MEAL_TYPE_LABEL[activeType]} recipes yet.` : 'No recipes yet.'}
+            </p>
+            {!activeType && (
+              <Link
+                href="/add"
+                className="flex items-center justify-center h-12 px-6 rounded-full bg-black text-white text-sm font-medium"
+              >
+                Add your first recipe
+              </Link>
+            )}
           </div>
         ) : (
           <ul className="divide-y divide-gray-100">
