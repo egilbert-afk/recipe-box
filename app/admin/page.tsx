@@ -13,18 +13,26 @@ type EventRow = {
   created_at: string
 }
 
+type FeedbackRow = {
+  id: string
+  user_id: string
+  message: string
+  created_at: string
+}
+
 export default async function AdminPage() {
   const serverClient = await createSupabaseServerClient()
   const { data: { user } } = await serverClient.auth.getUser()
   if (!user) redirect('/login')
   if (user.email !== process.env.ADMIN_EMAIL) redirect('/recipes')
 
-  const { data: events } = await supabase
-    .from('events')
-    .select('*')
-    .order('created_at', { ascending: false })
+  const [{ data: events }, { data: feedbackData }] = await Promise.all([
+    supabase.from('events').select('*').order('created_at', { ascending: false }),
+    supabase.from('feedback').select('*').order('created_at', { ascending: false }),
+  ])
 
   const rows = (events ?? []) as EventRow[]
+  const feedbackRows = (feedbackData ?? []) as FeedbackRow[]
 
   const thisWeek = rows.filter(e => {
     const d = new Date(e.created_at)
@@ -95,6 +103,26 @@ export default async function AdminPage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+          Feedback ({feedbackRows.length})
+        </h2>
+        {feedbackRows.length === 0 ? (
+          <p className="text-sm text-gray-400">No feedback yet.</p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {feedbackRows.map(f => (
+              <li key={f.id} className="py-3 space-y-1">
+                <p className="text-sm">{f.message}</p>
+                <p className="text-xs text-gray-400">
+                  {new Date(f.created_at).toLocaleString()}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   )
