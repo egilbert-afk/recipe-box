@@ -136,8 +136,8 @@ Each layer is fully tested and working before the next begins.
 | 8 | Archive and notes — soft delete with reason |
 | 9 | Household model — multi-tenant accounts, invite codes, cook sessions, onboarding flow |
 | 10 | Usage analytics — events table, POST /api/events, key instrumentation points (recipe added, capture method, cooking mode, search) |
-| 11 | PWA manifest + Share Sheet integration |
-| 12 | UI polish pass |
+| 11 | In-app feedback button — feedback table, POST /api/feedback, feedback form in app header, shown on /admin |
+| 12 | UI polish pass — bottom nav, recipe sorting and filtering by cuisine/meal type, known issues cleanup, shared auth helper |
 | 13 | Implied prep steps — Claude surfaces mincing/chopping from ingredient lists |
 | 14 | Cook history and ratings UI |
 | 15 | Meal planning and shopping list |
