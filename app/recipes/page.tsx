@@ -26,11 +26,21 @@ export default async function RecipesPage({
   const tsquery = query ? parseSearchQuery(query) : ''
 
   const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: membership } = await supabase
+    .from('household_members')
+    .select('household_id')
+    .eq('user_id', user!.id)
+    .maybeSingle()
+
   let recipes: RecipeListItem[] = []
   let loadError = ''
 
-  if (query && tsquery) {
-    const { data, error } = await supabase.rpc('search_recipes_by_ingredient', { query: tsquery })
+  if (query && tsquery && membership) {
+    const { data, error } = await supabase.rpc('search_recipes_by_ingredient', {
+      query: tsquery,
+      p_household_id: membership.household_id,
+    })
     if (error) loadError = error.message
     else recipes = data ?? []
   } else if (!query) {
