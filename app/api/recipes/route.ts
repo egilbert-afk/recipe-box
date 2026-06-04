@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { sortTitle } from '@/lib/formatters'
 import { CAPTURE_METHODS, type CreateRecipeInput, type CaptureMethod } from '@/lib/types'
+import { trackEvent } from '@/lib/events'
 
 export async function GET() {
   const serverClient = await createSupabaseServerClient()
@@ -164,6 +165,8 @@ export async function POST(request: NextRequest) {
     await supabase.from('recipes').delete().eq('id', recipe.id)
     return NextResponse.json({ error: stepsError.message }, { status: 500 })
   }
+
+  await trackEvent(user.id, membership.household_id, 'recipe_added', { capture_method: captureMethod })
 
   return NextResponse.json(recipe, { status: 201 })
 }

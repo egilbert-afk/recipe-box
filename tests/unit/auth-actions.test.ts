@@ -26,6 +26,11 @@ vi.mock('@/lib/supabase-server', () => ({
   ),
 }))
 
+vi.mock('@/lib/events', () => ({
+  trackEvent: vi.fn(),
+  VALID_EVENTS: [],
+}))
+
 function makeFormData(fields: Record<string, string>) {
   const fd = new FormData()
   for (const [k, v] of Object.entries(fields)) fd.set(k, v)
@@ -97,7 +102,7 @@ describe('signUp', () => {
   })
 
   it('redirects to /onboarding on successful signup with a session', async () => {
-    mockSignUp.mockResolvedValue({ data: { session: { access_token: 'tok' } }, error: null })
+    mockSignUp.mockResolvedValue({ data: { session: { access_token: 'tok', user: { id: 'user-123' } } }, error: null })
 
     await expect(
       signUp(makeFormData({ email: 'user@example.com', password: 'password123', confirm_password: 'password123' }))

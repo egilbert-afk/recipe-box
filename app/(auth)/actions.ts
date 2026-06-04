@@ -1,6 +1,7 @@
 'use server'
 
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { trackEvent } from '@/lib/events'
 import { redirect } from 'next/navigation'
 
 export async function signIn(formData: FormData) {
@@ -45,6 +46,8 @@ export async function signUp(formData: FormData) {
   if (!data.session) {
     redirect('/signup?message=Check+your+email+to+confirm+your+account')
   }
+
+  await trackEvent(data.session.user.id, null, 'account_created')
 
   redirect('/onboarding')
 }

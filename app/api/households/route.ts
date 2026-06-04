@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { trackEvent } from '@/lib/events'
 
 export async function POST(request: NextRequest) {
   const serverClient = await createSupabaseServerClient()
@@ -52,6 +53,8 @@ export async function POST(request: NextRequest) {
     await supabase.from('households').delete().eq('id', household.id)
     return NextResponse.json({ error: memberError.message }, { status: 500 })
   }
+
+  await trackEvent(user.id, household.id, 'household_created')
 
   return NextResponse.json(household, { status: 201 })
 }

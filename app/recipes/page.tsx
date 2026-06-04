@@ -4,6 +4,7 @@ import { SignOutButton } from '@/components/SignOutButton'
 import { CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
 import { sortTitle } from '@/lib/formatters'
 import { parseSearchQuery } from '@/lib/search'
+import { trackEvent } from '@/lib/events'
 import type { CuisineId, MealTypeId } from '@/lib/types'
 
 type RecipeListItem = {
@@ -42,7 +43,13 @@ export default async function RecipesPage({
       p_household_id: membership.household_id,
     })
     if (error) loadError = error.message
-    else recipes = data ?? []
+    else {
+      recipes = data ?? []
+      await trackEvent(user!.id, membership.household_id, 'search_performed', {
+        query_length: query.length,
+        result_count: recipes.length,
+      })
+    }
   } else if (!query) {
     const { data, error } = await supabase
       .from('recipes')
