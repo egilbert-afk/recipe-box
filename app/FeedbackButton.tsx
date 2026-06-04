@@ -41,7 +41,7 @@ export default function FeedbackButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-4 z-40 bg-gray-800 text-white text-sm px-4 py-2 rounded-full shadow-lg active:opacity-80"
+        className="fixed bottom-20 right-4 z-40 bg-gray-800 text-white text-sm px-4 py-2 rounded-full shadow-lg active:opacity-80"
         aria-label="Send feedback"
       >
         Feedback

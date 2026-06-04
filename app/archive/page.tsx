@@ -31,7 +31,7 @@ export default async function ArchivePage() {
   const recipes: ArchivedRecipe[] = data ?? []
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pb-20">
       <header className="flex items-center gap-3 px-4 py-4 border-b border-gray-200">
         <Link
           href="/recipes"

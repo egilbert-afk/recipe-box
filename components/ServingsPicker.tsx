@@ -14,6 +14,7 @@ export function ServingsPicker({ recipeId, baseServings }: Props) {
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={() => setServings((s) => Math.max(1, s - 1))}
           aria-label="Decrease servings"
           className="flex items-center justify-center h-12 w-12 rounded-full border border-gray-300 text-xl font-medium leading-none"
@@ -24,6 +25,7 @@ export function ServingsPicker({ recipeId, baseServings }: Props) {
           {servings} {servings === 1 ? 'serving' : 'servings'}
         </span>
         <button
+          type="button"
           onClick={() => setServings((s) => Math.min(20, s + 1))}
           aria-label="Increase servings"
           className="flex items-center justify-center h-12 w-12 rounded-full border border-gray-300 text-xl font-medium leading-none"
