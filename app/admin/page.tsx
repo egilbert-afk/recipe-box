@@ -17,6 +17,7 @@ export default async function AdminPage() {
   const serverClient = await createSupabaseServerClient()
   const { data: { user } } = await serverClient.auth.getUser()
   if (!user) redirect('/login')
+  if (user.email !== process.env.ADMIN_EMAIL) redirect('/recipes')
 
   const { data: events } = await supabase
     .from('events')
