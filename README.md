@@ -240,6 +240,7 @@ npm run dev
 | Parse routes have no auth check | 9 | `POST /api/parse` and `POST /api/parse-document` call the Claude API without authenticating the caller. Anyone who discovers these endpoints can trigger paid API calls. Low risk while the app is private, but auth should be added before any public exposure. |
 | Auth + membership lookup repeated across 5 routes | 9 | `getUser()` + `household_members` lookup is duplicated in every recipe route. Extract to a shared helper (e.g. `getAuthenticatedMembership()`) during the Layer 12 polish pass. |
 | Middleware creates a new service role client per request | 9 | `createClient` is called on every authenticated, non-exempt request in middleware. A module-level singleton would avoid repeated object allocation. Non-urgent at personal scale; revisit if middleware latency becomes noticeable. |
+| Recipes page runs getUser() and household lookup sequentially | 9 | The two Supabase calls on the recipes page run one after the other. Could be parallelized with `Promise.all` during the Layer 12 polish pass if page load time becomes a concern. |
 
 ---
 
