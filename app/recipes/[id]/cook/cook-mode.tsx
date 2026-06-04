@@ -20,6 +20,14 @@ export function CookMode({ title, recipeId, baseServings, targetServings, ingred
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
 
   useEffect(() => {
+    fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_name: 'cooking_mode_started', properties: { recipe_id: recipeId } }),
+    }).catch(() => {})
+  }, [recipeId])
+
+  useEffect(() => {
     if (!('wakeLock' in navigator)) return
 
     let unmounted = false

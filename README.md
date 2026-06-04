@@ -241,6 +241,9 @@ npm run dev
 | Auth + membership lookup repeated across 5 routes | 9 | `getUser()` + `household_members` lookup is duplicated in every recipe route. Extract to a shared helper (e.g. `getAuthenticatedMembership()`) during the Layer 12 polish pass. |
 | Middleware creates a new service role client per request | 9 | `createClient` is called on every authenticated, non-exempt request in middleware. A module-level singleton would avoid repeated object allocation. Non-urgent at personal scale; revisit if middleware latency becomes noticeable. |
 | Recipes page runs getUser() and household lookup sequentially | 9 | The two Supabase calls on the recipes page run one after the other. Could be parallelized with `Promise.all` during the Layer 12 polish pass if page load time becomes a concern. |
+| Event household_id is caller-supplied with no membership check | 10 | `POST /api/events` accepts any `household_id` without verifying the user belongs to it. Analytics data only — no functional impact — but could produce misleading counts. Low priority. |
+| trackEvent() is awaited in API response paths | 10 | Adds a DB round-trip before the response is returned. Convert to fire-and-forget (`trackEvent(...).catch(() => {})`) during the Layer 12 polish pass if response time becomes a concern. |
+| Admin page fetches all events with no limit | 10 | No `.limit()` on the events query in `/admin`. Fine at current scale; add pagination before the dataset grows large. |
 
 ---
 

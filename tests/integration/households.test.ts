@@ -15,6 +15,11 @@ vi.mock('@/lib/supabase-server', () => ({
   createSupabaseServerClient: vi.fn(),
 }))
 
+vi.mock('@/lib/events', () => ({
+  trackEvent: vi.fn(),
+  VALID_EVENTS: [],
+}))
+
 import { supabase } from '@/lib/supabase'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
