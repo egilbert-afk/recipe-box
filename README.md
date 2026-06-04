@@ -135,7 +135,7 @@ Each layer is fully tested and working before the next begins.
 | 7 | Supabase auth — login for primary user and spouse |
 | 8 | Archive and notes — soft delete with reason |
 | 9 | Household model — multi-tenant accounts, invite codes, cook sessions, onboarding flow |
-| 10 | In-app feedback button |
+| 10 | Usage analytics — events table, POST /api/events, key instrumentation points (recipe added, capture method, cooking mode, search) |
 | 11 | PWA manifest + Share Sheet integration |
 | 12 | UI polish pass |
 | 13 | Implied prep steps — Claude surfaces mincing/chopping from ingredient lists |
