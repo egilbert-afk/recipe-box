@@ -244,6 +244,7 @@ npm run dev
 | Event household_id is caller-supplied with no membership check | 10 | `POST /api/events` accepts any `household_id` without verifying the user belongs to it. Analytics data only — no functional impact — but could produce misleading counts. Low priority. |
 | trackEvent() is awaited in API response paths | 10 | Adds a DB round-trip before the response is returned. Convert to fire-and-forget (`trackEvent(...).catch(() => {})`) during the Layer 12 polish pass if response time becomes a concern. |
 | Admin page fetches all events with no limit | 10 | No `.limit()` on the events query in `/admin`. Fine at current scale; add pagination before the dataset grows large. |
+| Admin link not in navigation | 12 | `/admin` is only reachable by typing the URL directly. Add a conditional Admin link to the recipes page header (visible only when `user.email === ADMIN_EMAIL`) when touching that page again. |
 
 ---
 

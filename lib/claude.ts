@@ -19,6 +19,7 @@ interface ParsedRecipe {
     instruction: string
     order_index: number
   }>
+  implied_prep_steps?: string[]
 }
 
 export type SupportedImageMimeType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
@@ -44,6 +45,9 @@ The JSON must have exactly these fields:
       "instruction": string (one clear step),
       "order_index": number (0-based)
     }
+  ],
+  "implied_prep_steps": [
+    string (a concise, imperative prep instruction inferred from an ingredient's preparation modifier — only include if that prep work is NOT already covered anywhere in the steps; e.g. if an ingredient is "2 cloves garlic, minced" and no step mentions mincing the garlic, add "Mince the garlic." — return [] if all prep is already described in the steps or no ingredients require active preparation)
   ]
 }
 
@@ -52,7 +56,12 @@ Rules:
 - Each step must be its own object — never combine multiple steps into one
 - Strip all prose, backstory, tips, and commentary — only the recipe
 - If you cannot determine cuisine, use "other"
-- If you cannot determine meal type, use "entree"`
+- If you cannot determine meal type, use "entree"
+- implied_prep_steps must always be present, even if empty ([])
+- Only add an implied prep step when the prep modifier on an ingredient (minced, diced, chopped, sliced, grated, peeled, crushed, crumbled, shredded, zested, julienned, thinly sliced, finely chopped, roughly chopped) is genuinely absent from the steps — do not duplicate prep that is already described
+- Keep each implied prep step concise and imperative: "Dice the onion." not "You will need to dice the onion first."
+- You may group closely related quick tasks into one step: "Mince the garlic and finely chop the parsley." is better than two separate steps
+- Implied prep steps will be prepended before the recipe steps, so write them as if they come first`
 
 // Fetches a URL and returns the page HTML, server-side to avoid CORS issues
 export async function fetchUrl(url: string): Promise<string> {
@@ -116,13 +125,21 @@ function isValidParsedRecipe(data: unknown): data is ParsedRecipe {
     if (typeof step.instruction !== 'string' || !step.instruction.trim()) return false
   }
 
+  // implied_prep_steps is optional — if present must be an array of strings
+  if (d.implied_prep_steps !== undefined) {
+    if (!Array.isArray(d.implied_prep_steps)) return false
+    for (const s of d.implied_prep_steps) {
+      if (typeof s !== 'string') return false
+    }
+  }
+
   return true
 }
 
-// Shared: validates Claude's response and returns a CreateRecipeInput (without source_url)
-function extractRecipeFromMessage(message: Anthropic.Message): CreateRecipeInput {
-  const rawText = message.content[0].type === 'text' ? message.content[0].text : ''
-
+// Exported so it can be unit tested without mocking the Anthropic client.
+// Takes the raw text Claude returned, validates it, and combines implied prep
+// steps with the recipe steps (implied steps come first, re-indexed).
+export function parseRawRecipeJson(rawText: string): CreateRecipeInput {
   // Strip markdown fences if Claude included them despite instructions
   const cleaned = rawText.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
 
@@ -137,14 +154,30 @@ function extractRecipeFromMessage(message: Anthropic.Message): CreateRecipeInput
     throw new Error('Claude returned incomplete recipe data — please try manual entry')
   }
 
+  // Collect non-empty implied prep steps
+  const impliedInstructions: string[] = Array.isArray(parsed.implied_prep_steps)
+    ? parsed.implied_prep_steps.filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+    : []
+
+  // Prepend implied steps, then re-index the recipe steps to follow
+  const allSteps = [
+    ...impliedInstructions.map((instruction, i) => ({ instruction, order_index: i })),
+    ...parsed.steps.map((step, i) => ({ instruction: step.instruction, order_index: impliedInstructions.length + i })),
+  ]
+
   return {
     title: parsed.title,
     cuisine_id: parsed.cuisine_id,
     meal_type_id: parsed.meal_type_id,
     servings: parsed.servings,
     ingredients: parsed.ingredients,
-    steps: parsed.steps,
+    steps: allSteps,
   }
+}
+
+function extractRecipeFromMessage(message: Anthropic.Message): CreateRecipeInput {
+  const rawText = message.content[0].type === 'text' ? message.content[0].text : ''
+  return parseRawRecipeJson(rawText)
 }
 
 export async function parseRecipeFromUrl(url: string): Promise<CreateRecipeInput> {
