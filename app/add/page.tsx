@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { CUISINES, MEAL_TYPES } from '@/lib/constants'
 import type { CuisineId, MealTypeId, CreateRecipeInput } from '@/lib/types'
 
-type CaptureMode = 'url' | 'upload' | 'manual'
+type CaptureMode = 'url' | 'photo' | 'text'
 
 interface IngredientRow {
   id: number
@@ -53,6 +53,13 @@ export default function AddRecipePage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  function switchMode(next: CaptureMode) {
+    setMode(next)
+    setFormVisible(false)
+    setFetchError('')
+    setUploadError('')
+  }
+
   function prefillForm(data: CreateRecipeInput) {
     setTitle(data.title)
     setCuisineId(data.cuisine_id)
@@ -88,7 +95,7 @@ export default function AddRecipePage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setFetchError(data.error ?? 'Could not parse recipe. Try entering it manually.')
+        setFetchError(data.error ?? 'Could not parse recipe. Try pasting the text instead.')
         return
       }
 
@@ -142,7 +149,7 @@ export default function AddRecipePage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setUploadError(data.error ?? 'Could not read photo. Try entering the recipe manually.')
+        setUploadError(data.error ?? 'Could not read photo. Try pasting the text instead.')
         return
       }
       prefillForm(data)
@@ -165,7 +172,7 @@ export default function AddRecipePage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setUploadError(data.error ?? 'Could not parse recipe. Try entering it manually.')
+        setUploadError(data.error ?? 'Could not parse recipe. Try again.')
         return
       }
       prefillForm(data)
@@ -255,6 +262,7 @@ export default function AddRecipePage() {
     <div className="min-h-screen bg-white pb-20">
       <header className="flex items-center gap-3 px-4 py-4 border-b border-gray-200">
         <button
+          type="button"
           onClick={() => router.back()}
           className="flex items-center justify-center h-12 w-12 rounded-full text-gray-600 hover:bg-gray-100"
         >
@@ -268,34 +276,34 @@ export default function AddRecipePage() {
         <div className="flex rounded-lg border border-gray-200 overflow-hidden">
           <button
             type="button"
-            onClick={() => { setMode('url'); setFormVisible(false) }}
+            onClick={() => switchMode('url')}
             className={`flex-1 h-12 text-sm font-medium transition-colors ${
               mode === 'url' ? 'bg-black text-white' : 'bg-white text-gray-600'
             }`}
           >
-            Paste URL
+            Paste a link
           </button>
           <button
             type="button"
-            onClick={() => { setMode('upload'); setFormVisible(false) }}
+            onClick={() => switchMode('photo')}
             className={`flex-1 h-12 text-sm font-medium transition-colors ${
-              mode === 'upload' ? 'bg-black text-white' : 'bg-white text-gray-600'
+              mode === 'photo' ? 'bg-black text-white' : 'bg-white text-gray-600'
             }`}
           >
-            Photo / Text
+            Take a photo
           </button>
           <button
             type="button"
-            onClick={() => { setMode('manual'); setFormVisible(true) }}
+            onClick={() => switchMode('text')}
             className={`flex-1 h-12 text-sm font-medium transition-colors ${
-              mode === 'manual' ? 'bg-black text-white' : 'bg-white text-gray-600'
+              mode === 'text' ? 'bg-black text-white' : 'bg-white text-gray-600'
             }`}
           >
-            Type it in
+            Paste text
           </button>
         </div>
 
-        {/* URL capture */}
+        {/* Link capture */}
         {mode === 'url' && (
           <div className="space-y-3">
             <input
@@ -323,96 +331,66 @@ export default function AddRecipePage() {
           </div>
         )}
 
-        {/* Photo / Text capture */}
-        {mode === 'upload' && (
-          <div className="space-y-6">
-            {/* Photo section */}
-            <div className="space-y-3">
-              {/* Thumbnail strip */}
-              {imagePreviewUrls.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {imagePreviewUrls.map((url, i) => (
-                    <div key={i} className="relative flex-shrink-0">
-                      <img
-                        src={url}
-                        alt={`Page ${i + 1}`}
-                        className="h-20 w-20 object-cover rounded-lg border border-gray-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(i)}
-                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-gray-800 text-white text-xs flex items-center justify-center"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+        {/* Photo capture */}
+        {mode === 'photo' && (
+          <div className="space-y-3">
+            {imagePreviewUrls.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {imagePreviewUrls.map((url, i) => (
+                  <div key={i} className="relative flex-shrink-0">
+                    <img
+                      src={url}
+                      alt={`Page ${i + 1}`}
+                      className="h-20 w-20 object-cover rounded-lg border border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(i)}
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-gray-800 text-white text-xs flex items-center justify-center"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
-              {/* Drop zone (empty state) or Add another page (up to 10) */}
-              {imageFiles.length < 10 && (
-                <label className="block cursor-pointer">
-                  {imagePreviewUrls.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-36 w-full border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400">
-                      <p className="text-sm font-medium text-gray-700">Take photo or upload image</p>
-                      <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP · max 5 MB</p>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center h-12 w-full border border-gray-300 rounded-full text-sm text-gray-600 hover:border-gray-400">
-                      + Add another page
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    className="sr-only"
-                    onChange={handleImageSelect}
-                  />
-                </label>
-              )}
-
-              <button
-                type="button"
-                onClick={handlePhotoSubmit}
-                disabled={imageFiles.length === 0 || uploading}
-                className="flex items-center justify-center h-12 w-full rounded-full bg-black text-white text-sm font-medium disabled:opacity-50"
-              >
-                {uploading
-                  ? 'Reading photo...'
-                  : imageFiles.length > 1
-                    ? `Parse ${imageFiles.length} Photos`
-                    : 'Parse Photo'}
-              </button>
-            </div>
-
-            {/* Divider */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-gray-400 uppercase tracking-wide">or paste recipe text</span>
-              <div className="flex-1 h-px bg-gray-200" />
-            </div>
-
-            {/* Text paste section */}
-            <div className="space-y-3">
-              <textarea
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                placeholder="Paste recipe text here — ingredients, steps, anything Claude can read..."
-                rows={6}
-                className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base resize-none"
-              />
-              <button
-                type="button"
-                onClick={handleTextSubmit}
-                disabled={!textInput.trim() || uploading}
-                className="flex items-center justify-center h-12 w-full rounded-full bg-black text-white text-sm font-medium disabled:opacity-50"
-              >
-                {uploading ? 'Reading recipe...' : 'Parse Text'}
-              </button>
-            </div>
+            {imageFiles.length < 10 && (
+              <label className="block cursor-pointer">
+                {imagePreviewUrls.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-36 w-full border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400">
+                    <p className="text-sm font-medium text-gray-700">Take photo or upload image</p>
+                    <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP · max 5 MB</p>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-12 w-full border border-gray-300 rounded-full text-sm text-gray-600 hover:border-gray-400">
+                    + Add another page
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="sr-only"
+                  onChange={handleImageSelect}
+                />
+              </label>
+            )}
 
             {uploadError && <p className="text-red-600 text-sm">{uploadError}</p>}
+
+            <button
+              type="button"
+              onClick={handlePhotoSubmit}
+              disabled={imageFiles.length === 0 || uploading}
+              className="flex items-center justify-center h-12 w-full rounded-full bg-black text-white text-sm font-medium disabled:opacity-50"
+            >
+              {uploading
+                ? 'Reading photo...'
+                : imageFiles.length > 1
+                  ? `Parse ${imageFiles.length} Photos`
+                  : 'Parse Photo'}
+            </button>
+
             {uploading && (
               <p className="text-sm text-gray-500 text-center">
                 Claude is reading the recipe — this takes about 10 seconds.
@@ -421,14 +399,39 @@ export default function AddRecipePage() {
           </div>
         )}
 
-        {/* Recipe form — shown after URL parse or in manual mode */}
-        {formVisible && (
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {mode !== 'manual' && (
-              <p className="text-sm text-gray-500">
-                Review the extracted recipe below. Edit anything that looks off, then save.
+        {/* Text capture */}
+        {mode === 'text' && (
+          <div className="space-y-3">
+            <textarea
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder="Paste recipe text here — ingredients, steps, anything Claude can read..."
+              rows={6}
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base resize-none"
+            />
+            {uploadError && <p className="text-red-600 text-sm">{uploadError}</p>}
+            <button
+              type="button"
+              onClick={handleTextSubmit}
+              disabled={!textInput.trim() || uploading}
+              className="flex items-center justify-center h-12 w-full rounded-full bg-black text-white text-sm font-medium disabled:opacity-50"
+            >
+              {uploading ? 'Reading recipe...' : 'Parse Text'}
+            </button>
+            {uploading && (
+              <p className="text-sm text-gray-500 text-center">
+                Claude is reading the recipe — this takes about 10 seconds.
               </p>
             )}
+          </div>
+        )}
+
+        {/* Recipe review form — shown after Claude parses any capture method */}
+        {formVisible && (
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <p className="text-sm text-gray-500">
+              Review the extracted recipe below. Edit anything that looks off, then save.
+            </p>
 
             {error && <p className="text-red-600 text-sm">{error}</p>}
 
