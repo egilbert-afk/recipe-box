@@ -54,7 +54,14 @@ export default async function RecipesPage({
     <div className="min-h-screen bg-white pb-20">
       <header className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
         <h1 className="text-xl font-semibold">Recipe Box</h1>
-        <SignOutButton />
+        <div className="flex items-center gap-3">
+          {user?.email === process.env.ADMIN_EMAIL && (
+            <Link href="/admin" className="text-sm text-gray-500 underline">
+              Admin
+            </Link>
+          )}
+          <SignOutButton />
+        </div>
       </header>
 
       <main className="px-4 py-4 space-y-4">
