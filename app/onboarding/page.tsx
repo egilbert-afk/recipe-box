@@ -23,7 +23,7 @@ export default function OnboardingPage() {
       const res = await fetch('/api/households', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name: name.trim() || 'My Kitchen' }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -40,7 +40,7 @@ export default function OnboardingPage() {
       const res = await fetch('/api/households/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invite_code: code }),
+        body: JSON.stringify({ invite_code: code.trim() }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -53,9 +53,9 @@ export default function OnboardingPage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
-      <h1 className="text-2xl font-semibold mb-2">Welcome</h1>
-      <p className="text-gray-500 text-center mb-8">
-        Set up your household to get started.
+      <h1 className="text-2xl font-semibold mb-3">Welcome to Recipe Box</h1>
+      <p className="text-gray-500 text-center text-sm leading-relaxed mb-8 max-w-sm">
+        Recipe Box collects your favorite recipes in one place. Add from any website, photo, or copied text. A household is your shared kitchen. Everyone you invite can browse and cook from the same collection.
       </p>
 
       <div className="flex w-full max-w-sm mb-6 rounded-lg overflow-hidden border border-gray-200">
@@ -67,7 +67,7 @@ export default function OnboardingPage() {
             mode === 'create' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600'
           }`}
         >
-          Create household
+          Get started
         </button>
         <button
           type="button"
@@ -77,7 +77,7 @@ export default function OnboardingPage() {
             mode === 'join' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600'
           }`}
         >
-          Join with a code
+          I have an invite code
         </button>
       </div>
 
@@ -86,20 +86,21 @@ export default function OnboardingPage() {
           <>
             <input
               type="text"
-              placeholder="Household name (e.g. The Gilberts)"
+              placeholder="Kitchen name (optional, e.g. The Gilberts)"
               value={name}
               onChange={e => setName(e.target.value)}
               disabled={isPending}
               maxLength={100}
               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:opacity-50"
             />
+            <p className="text-xs text-gray-400 text-center">You can invite family members from settings later.</p>
             <button
               type="button"
               onClick={handleCreate}
-              disabled={isPending || !name.trim()}
+              disabled={isPending}
               className="w-full bg-gray-900 text-white rounded-lg py-3 text-base font-medium disabled:opacity-50"
             >
-              {isPending ? 'Creating…' : 'Create household'}
+              {isPending ? 'Setting up…' : 'Get started'}
             </button>
           </>
         ) : (
@@ -119,7 +120,7 @@ export default function OnboardingPage() {
               disabled={isPending || code.trim().length !== 8}
               className="w-full bg-gray-900 text-white rounded-lg py-3 text-base font-medium disabled:opacity-50"
             >
-              {isPending ? 'Joining…' : 'Join household'}
+              {isPending ? 'Joining…' : 'Join'}
             </button>
           </>
         )}

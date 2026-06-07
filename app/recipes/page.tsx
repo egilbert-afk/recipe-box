@@ -80,17 +80,33 @@ export default async function RecipesPage({
 
         {/* Recipe list */}
         {recipes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <p className="text-gray-500 text-lg mb-6">
-              {activeType ? `No ${MEAL_TYPE_LABEL[activeType]} recipes yet.` : 'No recipes yet.'}
-            </p>
-            {!activeType && (
-              <Link
-                href="/add"
-                className="flex items-center justify-center h-12 px-6 rounded-full bg-black text-white text-sm font-medium"
-              >
-                Add your first recipe
-              </Link>
+          <div className="py-12 text-center">
+            {activeType ? (
+              <p className="text-gray-500 text-base">No {MEAL_TYPE_LABEL[activeType]} recipes yet.</p>
+            ) : (
+              <>
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Everything in its place.</h2>
+                <p className="text-gray-500 text-sm mb-8">Start by adding your first recipe.</p>
+                <div className="space-y-3 text-left">
+                  {[
+                    { label: 'Paste a link', description: 'From any recipe website' },
+                    { label: 'Take a photo', description: 'Recipe cards, cookbooks, handwritten notes' },
+                    { label: 'Paste text', description: 'A message, an email, anything copied' },
+                  ].map((method) => (
+                    <Link
+                      key={method.label}
+                      href="/add"
+                      className="flex items-center justify-between px-4 py-4 border border-gray-200 rounded-xl"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{method.label}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{method.description}</p>
+                      </div>
+                      <span className="text-gray-400 text-sm">→</span>
+                    </Link>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         ) : (
