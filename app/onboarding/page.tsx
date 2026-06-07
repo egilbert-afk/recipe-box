@@ -1,6 +1,5 @@
 'use client'
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 
 type Mode = 'create' | 'join'
 
@@ -10,7 +9,6 @@ export default function OnboardingPage() {
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
-  const router = useRouter()
 
   function switchMode(next: Mode) {
     setMode(next)
@@ -30,7 +28,7 @@ export default function OnboardingPage() {
         setError(data.error ?? 'Something went wrong')
         return
       }
-      router.push('/recipes')
+      window.location.href = '/recipes'
     })
   }
 
@@ -47,7 +45,7 @@ export default function OnboardingPage() {
         setError(data.error ?? 'Something went wrong')
         return
       }
-      router.push('/recipes')
+      window.location.href = '/recipes'
     })
   }
 
