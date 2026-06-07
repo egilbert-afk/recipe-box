@@ -63,16 +63,6 @@ export interface RecipeWithDetails extends Recipe {
   steps: Step[]
 }
 
-// Returned by the search_recipes_by_ingredient RPC
-export interface RecipeSearchResult {
-  id: string
-  title: string
-  cuisine_id: CuisineId
-  meal_type_id: MealTypeId
-  servings: number
-  match_count: number
-}
-
 // Shape of the form data when creating a recipe manually
 export interface CreateRecipeInput {
   title: string
