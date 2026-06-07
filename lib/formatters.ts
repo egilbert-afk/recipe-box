@@ -3,12 +3,6 @@ export function sortTitle(title: string): string {
   return title.replace(/^the\s+/i, '').toLowerCase()
 }
 
-// Capitalizes the first letter of a string
-export function capitalize(str: string): string {
-  if (!str) return ''
-  return str.charAt(0).toUpperCase() + str.slice(1)
-}
-
 // Formats an ingredient for display: "2 cups flour", "1 egg", "salt to taste"
 export function formatIngredient(
   name: string,
