@@ -54,7 +54,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: memberError.message }, { status: 500 })
   }
 
-  await trackEvent(user.id, household.id, 'household_created')
+  try {
+    await trackEvent(user.id, household.id, 'household_created')
+  } catch (err) {
+    console.error('trackEvent failed after household creation:', err)
+  }
 
   return NextResponse.json(household, { status: 201 })
 }
