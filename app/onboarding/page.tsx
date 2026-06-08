@@ -53,7 +53,7 @@ export default function OnboardingPage() {
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
       <h1 className="text-2xl font-semibold mb-3">Welcome to Recipe Box</h1>
       <p className="text-gray-500 text-center text-sm leading-relaxed mb-8 max-w-sm">
-        Recipe Box keeps your family's recipes in one place. A kitchen is for your household — the people you live with, typically 2 to 6. Everyone shares the same collection and, later, shopping lists. Add recipes from any website, photo, or copied text.
+        Recipe Box keeps your family's recipes in one place. A kitchen is your household's shared space. Add recipes together, cook from the same collection.
       </p>
 
       <div className="flex w-full max-w-sm mb-6 rounded-lg overflow-hidden border border-gray-200">
