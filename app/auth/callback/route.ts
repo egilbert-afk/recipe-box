@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { trackEvent } from '@/lib/events'
 
 // Handles Supabase auth redirects (e.g. email confirmation links).
 // The response object must be created first so the Supabase client can
@@ -8,6 +9,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const type = searchParams.get('type')
 
   if (code) {
     const response = NextResponse.redirect(`${origin}/recipes`)
@@ -29,8 +31,15 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      if (type === 'signup' && sessionData.user) {
+        try {
+          await trackEvent(sessionData.user.id, null, 'account_created')
+        } catch (err) {
+          console.error('trackEvent failed after signup confirmation:', err)
+        }
+      }
       return response
     }
   }

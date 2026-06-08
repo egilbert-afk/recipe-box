@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { parseSearchQuery } from '@/lib/search'
+import { trackEvent } from '@/lib/events'
 
 export async function GET(request: NextRequest) {
   const serverClient = await createSupabaseServerClient()
@@ -43,6 +44,14 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  if (q.length >= 3) {
+    try {
+      await trackEvent(user.id, membership.household_id, 'search_performed', { query: q })
+    } catch (err) {
+      console.error('trackEvent failed after search:', err)
+    }
   }
 
   return NextResponse.json(data ?? [])
