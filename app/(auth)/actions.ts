@@ -3,6 +3,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { trackEvent } from '@/lib/events'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 
 export async function signIn(formData: FormData) {
   const email = formData.get('email') as string
@@ -35,8 +36,13 @@ export async function signUp(formData: FormData) {
     redirect('/signup?error=Passwords+do+not+match')
   }
 
+  const headersList = await headers()
+  const host = headersList.get('host') ?? 'localhost:3000'
+  const protocol = host.includes('localhost') ? 'http' : 'https'
+  const emailRedirectTo = `${protocol}://${host}/auth/callback?type=signup`
+
   const supabase = await createSupabaseServerClient()
-  const { data, error } = await supabase.auth.signUp({ email, password })
+  const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo } })
 
   if (error) {
     redirect(`/signup?error=${encodeURIComponent(error.message)}`)

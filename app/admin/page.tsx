@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { supabase } from '@/lib/supabase'
+import { LocalTime } from './LocalTime'
 
 export const dynamic = 'force-dynamic'
 
@@ -63,12 +64,21 @@ export default async function AdminPage() {
   const prior30 = countByEvent(e => new Date(e.created_at) >= d60 && new Date(e.created_at) < d30)
   const allTime = countByEvent(() => true)
 
-  const eventNames = [...new Set(rows.map(e => e.event_name))].sort()
-
-  const byUser = rows.reduce<Record<string, number>>((acc, e) => {
-    acc[e.user_id] = (acc[e.user_id] ?? 0) + 1
+  const byHousehold = rows.reduce<Record<string, number>>((acc, e) => {
+    const key = e.household_id ?? '(no kitchen)'
+    acc[key] = (acc[key] ?? 0) + 1
     return acc
   }, {})
+
+  const householdIds = Object.keys(byHousehold).filter(id => id !== '(no kitchen)')
+  const { data: householdsData } = householdIds.length > 0
+    ? await supabase.from('households').select('id, name').in('id', householdIds)
+    : { data: [] }
+
+  const kitchenName: Record<string, string> = {}
+  for (const h of householdsData ?? []) {
+    kitchenName[h.id] = h.name
+  }
 
   return (
     <div className="min-h-screen bg-white px-4 py-8 max-w-3xl mx-auto space-y-10">
@@ -95,9 +105,9 @@ export default async function AdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {eventNames.map(name => (
+              {Object.keys(EVENT_LABEL).map(name => (
                 <tr key={name}>
-                  <td className="py-2 pr-4 text-gray-700">{EVENT_LABEL[name] ?? name}</td>
+                  <td className="py-2 pr-4 text-gray-700">{EVENT_LABEL[name]}</td>
                   <td className="py-2 pr-4 text-right font-semibold">{last7[name] ?? 0}</td>
                   <td className="py-2 pr-4 text-right text-gray-400">{prior7[name] ?? 0}</td>
                   <td className="py-2 pr-4 text-right font-semibold">{last30[name] ?? 0}</td>
@@ -105,23 +115,18 @@ export default async function AdminPage() {
                   <td className="py-2 text-right font-semibold">{allTime[name] ?? 0}</td>
                 </tr>
               ))}
-              {eventNames.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="py-4 text-center text-gray-400">No events yet.</td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
       </section>
 
-      {/* By user */}
+      {/* By kitchen */}
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">By user</h2>
+        <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">By kitchen</h2>
         <ul className="divide-y divide-gray-100">
-          {Object.entries(byUser).sort((a, b) => b[1] - a[1]).map(([userId, count]) => (
-            <li key={userId} className="flex justify-between py-2 text-sm">
-              <span className="font-mono text-gray-400 truncate max-w-xs">{userId}</span>
+          {Object.entries(byHousehold).sort((a, b) => b[1] - a[1]).map(([householdId, count]) => (
+            <li key={householdId} className="flex justify-between py-2 text-sm">
+              <span className="text-gray-700">{kitchenName[householdId] ?? householdId}</span>
               <span className="font-semibold">{count}</span>
             </li>
           ))}
@@ -137,7 +142,7 @@ export default async function AdminPage() {
               <div className="flex justify-between text-sm">
                 <span className="font-medium">{EVENT_LABEL[e.event_name] ?? e.event_name}</span>
                 <span className="text-gray-400 text-xs">
-                  {new Date(e.created_at).toLocaleString()}
+                  <LocalTime iso={e.created_at} />
                 </span>
               </div>
               {Object.keys(e.properties).length > 0 && (
@@ -163,7 +168,7 @@ export default async function AdminPage() {
               <li key={f.id} className="py-3 space-y-1">
                 <p className="text-sm">{f.message}</p>
                 <p className="text-xs text-gray-400">
-                  {new Date(f.created_at).toLocaleString()}
+                  <LocalTime iso={f.created_at} />
                 </p>
               </li>
             ))}
