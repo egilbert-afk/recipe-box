@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { parseRecipeFromUrl } from '@/lib/claude'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function POST(request: NextRequest) {
+  const serverClient = await createSupabaseServerClient()
+  const { data: { user } } = await serverClient.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   let body: { url?: string }
 
   try {

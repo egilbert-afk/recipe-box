@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { parseRecipeFromText, parseRecipeFromImage } from '@/lib/claude'
 import type { SupportedImageMimeType } from '@/lib/claude'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 const SUPPORTED_IMAGE_TYPES: SupportedImageMimeType[] = [
   'image/jpeg',
@@ -12,6 +13,12 @@ const SUPPORTED_IMAGE_TYPES: SupportedImageMimeType[] = [
 type ImageInput = { data: string; mimeType: string }
 
 export async function POST(request: NextRequest) {
+  const serverClient = await createSupabaseServerClient()
+  const { data: { user } } = await serverClient.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   let body: { text?: string; images?: unknown }
 
   try {
