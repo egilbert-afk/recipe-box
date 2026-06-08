@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CUISINES, MEAL_TYPES } from '@/lib/constants'
 import type { CuisineId, MealTypeId, CreateRecipeInput } from '@/lib/types'
@@ -28,6 +28,14 @@ function emptyStep(id: number): StepRow {
 }
 
 export default function AddRecipePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <AddRecipePageContent />
+    </Suspense>
+  )
+}
+
+function AddRecipePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
