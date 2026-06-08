@@ -26,6 +26,8 @@ export default async function SettingsPage() {
     .eq('id', membership.household_id)
     .single()
 
+  if (!household) redirect('/recipes')
+
   const { data: members } = await supabase
     .from('household_members')
     .select('user_id, role, joined_at')
@@ -60,16 +62,16 @@ export default async function SettingsPage() {
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Kitchen name</h2>
           {isOwner ? (
-            <KitchenNameEditor initialName={household?.name ?? ''} />
+            <KitchenNameEditor initialName={household.name} />
           ) : (
-            <p className="text-base text-gray-900">{household?.name}</p>
+            <p className="text-base text-gray-900">{household.name}</p>
           )}
         </section>
 
         {/* Invite code */}
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Invite code</h2>
-          <InviteCode code={household?.invite_code ?? ''} />
+          <InviteCode code={household.invite_code} />
         </section>
 
         {/* Members */}
