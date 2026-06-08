@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { CUISINES, MEAL_TYPES } from '@/lib/constants'
 import type { CuisineId, MealTypeId, CreateRecipeInput } from '@/lib/types'
 
@@ -28,9 +28,21 @@ function emptyStep(id: number): StepRow {
 }
 
 export default function AddRecipePage() {
-  const router = useRouter()
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <AddRecipePageContent />
+    </Suspense>
+  )
+}
 
-  const [mode, setMode] = useState<CaptureMode>('url')
+function AddRecipePageContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const rawMode = searchParams.get('mode')
+  const [mode, setMode] = useState<CaptureMode>(
+    rawMode === 'url' || rawMode === 'photo' || rawMode === 'text' ? rawMode : 'url'
+  )
   const [urlInput, setUrlInput] = useState('')
   const [fetching, setFetching] = useState(false)
   const [fetchError, setFetchError] = useState('')
@@ -310,7 +322,7 @@ export default function AddRecipePage() {
               type="url"
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="https://www.seriouseats.com/..."
+              placeholder="https://..."
               className="w-full h-12 px-3 border border-gray-300 rounded-lg text-base"
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleFetchUrl() } }}
             />
@@ -321,11 +333,11 @@ export default function AddRecipePage() {
               disabled={fetching || !urlInput.trim()}
               className="flex items-center justify-center h-12 w-full rounded-full bg-black text-white text-sm font-medium disabled:opacity-50"
             >
-              {fetching ? 'Fetching recipe...' : 'Fetch Recipe'}
+              {fetching ? 'Getting recipe...' : 'Get recipe'}
             </button>
             {fetching && (
               <p className="text-sm text-gray-500 text-center">
-                Claude is reading the page and extracting the recipe — this takes about 10 seconds.
+                Reading your recipe — this takes about 10 seconds.
               </p>
             )}
           </div>
@@ -387,13 +399,13 @@ export default function AddRecipePage() {
               {uploading
                 ? 'Reading photo...'
                 : imageFiles.length > 1
-                  ? `Parse ${imageFiles.length} Photos`
-                  : 'Parse Photo'}
+                  ? `Read ${imageFiles.length} photos`
+                  : 'Read photo'}
             </button>
 
             {uploading && (
               <p className="text-sm text-gray-500 text-center">
-                Claude is reading the recipe — this takes about 10 seconds.
+                Reading your recipe — this takes about 10 seconds.
               </p>
             )}
           </div>
@@ -405,7 +417,7 @@ export default function AddRecipePage() {
             <textarea
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              placeholder="Paste recipe text here — ingredients, steps, anything Claude can read..."
+              placeholder="Paste recipe text here — ingredients, steps, anything you've copied..."
               rows={6}
               className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base resize-none"
             />
@@ -416,11 +428,11 @@ export default function AddRecipePage() {
               disabled={!textInput.trim() || uploading}
               className="flex items-center justify-center h-12 w-full rounded-full bg-black text-white text-sm font-medium disabled:opacity-50"
             >
-              {uploading ? 'Reading recipe...' : 'Parse Text'}
+              {uploading ? 'Reading recipe...' : 'Read recipe'}
             </button>
             {uploading && (
               <p className="text-sm text-gray-500 text-center">
-                Claude is reading the recipe — this takes about 10 seconds.
+                Reading your recipe — this takes about 10 seconds.
               </p>
             )}
           </div>
