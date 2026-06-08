@@ -53,17 +53,11 @@ export default async function LoginPage({
           </button>
         </form>
 
-        <div className="text-center space-y-2">
+        <div className="text-center">
           <p className="text-sm text-gray-500">
             New to Recipe Box?{' '}
             <a href="/signup" className="text-gray-900 underline">
-              Create an account
-            </a>
-          </p>
-          <p className="text-sm text-gray-500">
-            Have an invite code?{' '}
-            <a href="/signup" className="text-gray-900 underline">
-              Create an account to join
+              Sign up
             </a>
           </p>
         </div>
