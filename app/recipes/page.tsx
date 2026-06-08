@@ -32,7 +32,7 @@ export default async function RecipesPage({
     .maybeSingle()
 
   const householdName = membership
-    ? (membership.households as { name: string } | null)?.name ?? null
+    ? (membership.households as unknown as { name: string } | null)?.name ?? null
     : null
 
   let recipes: RecipeListItem[] = []
