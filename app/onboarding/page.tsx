@@ -53,7 +53,7 @@ export default function OnboardingPage() {
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
       <h1 className="text-2xl font-semibold mb-3">Welcome to Recipe Box</h1>
       <p className="text-gray-500 text-center text-sm leading-relaxed mb-8 max-w-sm">
-        Recipe Box collects your favorite recipes in one place. Add from any website, photo, or copied text. A household is your shared kitchen. Everyone you invite can browse and cook from the same collection.
+        Recipe Box keeps your family's recipes in one place. A kitchen is for your household — the people you live with, typically 2 to 6. Everyone shares the same collection and, later, shopping lists. Add recipes from any website, photo, or copied text.
       </p>
 
       <div className="flex w-full max-w-sm mb-6 rounded-lg overflow-hidden border border-gray-200">
@@ -65,7 +65,7 @@ export default function OnboardingPage() {
             mode === 'create' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600'
           }`}
         >
-          Get started
+          Create a kitchen
         </button>
         <button
           type="button"
@@ -75,7 +75,7 @@ export default function OnboardingPage() {
             mode === 'join' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600'
           }`}
         >
-          I have an invite code
+          Join a kitchen
         </button>
       </div>
 
@@ -91,14 +91,14 @@ export default function OnboardingPage() {
               maxLength={100}
               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:opacity-50"
             />
-            <p className="text-xs text-gray-400 text-center">You can invite family members from settings later.</p>
+            <p className="text-xs text-gray-400 text-center">You can invite household members from settings after setup.</p>
             <button
               type="button"
               onClick={handleCreate}
               disabled={isPending}
               className="w-full bg-gray-900 text-white rounded-lg py-3 text-base font-medium disabled:opacity-50"
             >
-              {isPending ? 'Setting up…' : 'Get started'}
+              {isPending ? 'Setting up…' : "Let's go"}
             </button>
           </>
         ) : (
