@@ -96,13 +96,13 @@ export default async function RecipesPage({
                 <p className="text-gray-500 text-sm mb-8">Start by adding your first recipe.</p>
                 <div className="space-y-3 text-left">
                   {[
-                    { label: 'Paste a link', description: 'From any recipe website' },
-                    { label: 'Take a photo', description: 'Recipe cards, cookbooks, handwritten notes' },
-                    { label: 'Paste text', description: 'A message, an email, anything copied' },
+                    { label: 'Paste a link', description: 'From any recipe website', mode: 'url' },
+                    { label: 'Take a photo', description: 'Recipe cards, cookbooks, handwritten notes', mode: 'photo' },
+                    { label: 'Paste text', description: 'A message, an email, anything copied', mode: 'text' },
                   ].map((method) => (
                     <Link
                       key={method.label}
-                      href="/add"
+                      href={`/add?mode=${method.mode}`}
                       className="flex items-center justify-between px-4 py-4 border border-gray-200 rounded-xl"
                     >
                       <div>
