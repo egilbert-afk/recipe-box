@@ -27,9 +27,13 @@ export default async function RecipesPage({
   const { data: { user } } = await supabase.auth.getUser()
   const { data: membership } = await supabase
     .from('household_members')
-    .select('household_id')
+    .select('household_id, households(name)')
     .eq('user_id', user!.id)
     .maybeSingle()
+
+  const householdName = membership
+    ? (membership.households as { name: string } | null)?.name ?? null
+    : null
 
   let recipes: RecipeListItem[] = []
   let loadError = ''
@@ -53,13 +57,21 @@ export default async function RecipesPage({
   return (
     <div className="min-h-screen bg-white pb-20">
       <header className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
-        <h1 className="text-xl font-semibold">Recipe Box</h1>
+        <div>
+          <h1 className="text-xl font-semibold">Recipe Box</h1>
+          {householdName && (
+            <p className="text-xs text-gray-400">{householdName}</p>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           {user?.email === process.env.ADMIN_EMAIL && (
             <Link href="/admin" className="text-sm text-gray-500 underline">
               Admin
             </Link>
           )}
+          <Link href="/settings" className="text-sm text-gray-500 underline">
+            Settings
+          </Link>
           <SignOutButton />
         </div>
       </header>
