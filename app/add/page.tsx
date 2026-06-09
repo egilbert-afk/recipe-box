@@ -184,7 +184,7 @@ function AddRecipePageContent() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setUploadError(data.error ?? 'Could not parse recipe. Try again.')
+        setUploadError(data.error ?? "Couldn't read the recipe. Try copying more of the page, including the ingredients and steps.")
         return
       }
       prefillForm(data)
@@ -260,7 +260,7 @@ function AddRecipePageContent() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error ?? 'Something went wrong.')
+        setError(data.error ?? "Couldn't save the recipe. Try again.")
         return
       }
 

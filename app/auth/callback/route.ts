@@ -44,5 +44,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=Authentication+failed`)
+  return NextResponse.redirect(`${origin}/login?error=That+sign-in+link+has+expired.+Try+signing+in+again.`)
 }

@@ -25,7 +25,7 @@ export default function OnboardingPage() {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        setError(data.error ?? 'Something went wrong')
+        setError(data.error ?? 'Something went wrong. Please try again.')
         return
       }
       window.location.href = '/recipes'
@@ -42,7 +42,7 @@ export default function OnboardingPage() {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        setError(data.error ?? 'Something went wrong')
+        setError(data.error ?? 'Something went wrong. Please try again.')
         return
       }
       window.location.href = '/recipes'
