@@ -4,17 +4,19 @@ import Link from 'next/link'
 import type { Ingredient, Step } from '@/lib/types'
 import { formatAmount } from '@/lib/scaler'
 import { formatIngredient } from '@/lib/formatters'
+import { RecipeNotes } from '@/components/RecipeNotes'
 
 type Props = {
   title: string
   recipeId: string
   baseServings: number
   targetServings: number
+  notes: string | null
   ingredients: Ingredient[]
   steps: Step[]
 }
 
-export function CookMode({ title, recipeId, baseServings, targetServings, ingredients, steps }: Props) {
+export function CookMode({ title, recipeId, baseServings, targetServings, notes, ingredients, steps }: Props) {
   const [currentStep, setCurrentStep] = useState(0)
   const [ingredientsOpen, setIngredientsOpen] = useState(false)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
@@ -107,6 +109,13 @@ export function CookMode({ title, recipeId, baseServings, targetServings, ingred
           </ul>
         )}
       </div>
+
+      {/* Personal notes */}
+      {notes && (
+        <div className="px-4 pt-4">
+          <RecipeNotes notes={notes} />
+        </div>
+      )}
 
       {/* Current step */}
       <main className="flex-1 flex flex-col px-4 py-6">

@@ -109,6 +109,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Step instructions must be 2000 characters or fewer' }, { status: 400 })
     }
   }
+  if (body.notes && body.notes.length > 1000) {
+    return NextResponse.json({ error: 'Notes must be 1000 characters or fewer' }, { status: 400 })
+  }
 
   const captureMethod: CaptureMethod =
     body.capture_method && CAPTURE_METHODS.includes(body.capture_method)
@@ -123,6 +126,7 @@ export async function POST(request: NextRequest) {
       meal_type_id: body.meal_type_id,
       source_url: body.source_url || null,
       servings: body.servings,
+      notes: body.notes?.trim() || null,
       capture_method: captureMethod,
       household_id: membership.household_id,
       created_by: user.id,
