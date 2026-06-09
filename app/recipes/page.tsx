@@ -51,7 +51,7 @@ export default async function RecipesPage({
   }
 
   if (loadError) {
-    return <p className="p-4 text-red-600">Failed to load recipes: {loadError}</p>
+    return <p className="p-4 text-red-600">Couldn't load your recipes. Try refreshing the page.</p>
   }
 
   return (

@@ -25,7 +25,7 @@ export default async function ArchivePage() {
     .order('updated_at', { ascending: false })
 
   if (error) {
-    return <p className="p-4 text-red-600">Failed to load archive: {error.message}</p>
+    return <p className="p-4 text-red-600">Couldn't load your archive. Try refreshing the page.</p>
   }
 
   const recipes: ArchivedRecipe[] = data ?? []
