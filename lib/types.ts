@@ -51,6 +51,7 @@ export interface Recipe {
   meal_type_id: MealTypeId
   source_url: string | null
   servings: number
+  notes: string | null
   archived: boolean
   archive_note: string | null
   capture_method: CaptureMethod
@@ -70,6 +71,7 @@ export interface CreateRecipeInput {
   meal_type_id: MealTypeId
   source_url?: string
   servings: number
+  notes?: string
   capture_method?: CaptureMethod
   ingredients: Array<{
     name: string

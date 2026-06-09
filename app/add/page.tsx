@@ -61,6 +61,7 @@ function AddRecipePageContent() {
   const [nextId, setNextId] = useState(2)
   const [ingredients, setIngredients] = useState<IngredientRow[]>([emptyIngredient(0)])
   const [steps, setSteps] = useState<StepRow[]>([emptyStep(1)])
+  const [notes, setNotes] = useState('')
   const [formVisible, setFormVisible] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -89,6 +90,7 @@ function AddRecipePageContent() {
     )
     setSteps(data.steps.map((s) => ({ id: id++, instruction: s.instruction })))
     setNextId(id)
+    setNotes('')
     setFormVisible(true)
   }
 
@@ -247,6 +249,7 @@ function AddRecipePageContent() {
       steps: steps
         .filter((s) => s.instruction.trim())
         .map((s, i) => ({ instruction: s.instruction, order_index: i })),
+      notes: notes.trim() || undefined,
     }
 
     setSubmitting(true)
@@ -613,6 +616,19 @@ function AddRecipePageContent() {
               >
                 + Add step
               </button>
+            </div>
+
+            {/* Personal notes */}
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">Your notes <span className="font-normal text-gray-400">(optional)</span></label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Substitutions, tweaks, things to remember…"
+                rows={3}
+                maxLength={1000}
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base resize-none"
+              />
             </div>
 
             <button

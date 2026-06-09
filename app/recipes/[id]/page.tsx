@@ -6,6 +6,7 @@ import type { RecipeWithDetails } from '@/lib/types'
 import { formatIngredient } from '@/lib/formatters'
 import { ServingsPicker } from '@/components/ServingsPicker'
 import { ArchiveButton } from '@/components/ArchiveButton'
+import { RecipeNotes } from '@/components/RecipeNotes'
 
 export default async function RecipePage({
   params,
@@ -59,6 +60,8 @@ export default async function RecipePage({
         </div>
 
         <ServingsPicker recipeId={full.id} baseServings={full.servings} />
+
+        {full.notes && <RecipeNotes notes={full.notes} />}
 
         {full.source_url && (
           <a
