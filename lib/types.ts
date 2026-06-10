@@ -64,6 +64,24 @@ export interface RecipeWithDetails extends Recipe {
   steps: Step[]
 }
 
+export interface UpdateRecipeInput {
+  title: string
+  cuisine_id: CuisineId
+  meal_type_id: MealTypeId
+  servings: number
+  notes?: string
+  ingredients: Array<{
+    name: string
+    amount: number | null
+    unit: string | null
+    order_index: number
+  }>
+  steps: Array<{
+    instruction: string
+    order_index: number
+  }>
+}
+
 // Shape of the form data when creating a recipe manually
 export interface CreateRecipeInput {
   title: string
