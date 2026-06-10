@@ -44,6 +44,12 @@ export default async function RecipePage({
           ←
         </Link>
         <h1 className="text-lg font-semibold flex-1 truncate">{full.title}</h1>
+        <Link
+          href={`/recipes/${full.id}/edit`}
+          className="text-sm text-gray-500 underline"
+        >
+          Edit
+        </Link>
       </header>
 
       <main className="px-4 py-6 space-y-8">
