@@ -8,12 +8,15 @@ export function InviteCode({ code, kitchenName }: { code: string; kitchenName: s
   useEffect(() => {
     setJoinUrl(`${window.location.origin}/join?code=${code}`)
   }, [code])
-  const shareText = `Join my kitchen "${kitchenName}" on Mise and cook together!`
+
+  const shareTitle = `Join ${kitchenName} on Recipe Box`
+  const shareText = `I'd like you to join ${kitchenName} — it's where we keep all our family recipes. Tap the link to join.`
+  const emailBody = `I'd like you to join ${kitchenName} on Recipe Box — a shared collection of our family recipes.\n\nClick the link below to join:\n${joinUrl}`
 
   async function handleShare() {
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Join my kitchen on Mise', text: shareText, url: joinUrl })
+        await navigator.share({ title: shareTitle, text: shareText, url: joinUrl })
       } catch {
         // User dismissed the share sheet — no action needed
       }
@@ -32,12 +35,12 @@ export function InviteCode({ code, kitchenName }: { code: string; kitchenName: s
     }
   }
 
-  const mailtoHref = `mailto:?subject=${encodeURIComponent(`Join my kitchen on Mise`)}&body=${encodeURIComponent(`${shareText}\n\nClick here to join:\n${joinUrl}`)}`
+  const mailtoHref = `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(emailBody)}`
 
   return (
     <div className="space-y-3">
       <p className="text-sm text-gray-500">
-        Invite someone to cook with you. They'll get a link that takes them straight in.
+        Send someone a link to join your kitchen. They'll be added automatically when they sign up.
       </p>
       <div className="flex gap-2">
         <button
@@ -45,7 +48,7 @@ export function InviteCode({ code, kitchenName }: { code: string; kitchenName: s
           onClick={handleShare}
           className="flex-1 h-12 bg-gray-900 text-white rounded-xl text-sm font-medium"
         >
-          {copied ? 'Link copied!' : 'Share invite'}
+          {copied ? 'Link copied!' : 'Share link'}
         </button>
         <a
           href={mailtoHref}
