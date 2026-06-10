@@ -1,5 +1,5 @@
 'use client'
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 
 type Mode = 'create' | 'join'
 
@@ -49,27 +49,32 @@ export function OnboardingForm({ initialCode }: { initialCode?: string }) {
     })
   }
 
-  // When arriving via an invite link, skip the mode toggle and go straight to joining
+  // When arriving via an invite link, auto-join on mount — no extra click needed.
+  // The user already confirmed intent by tapping "Accept invite" on the /join page.
+  useEffect(() => {
+    if (initialCode) {
+      handleJoin()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   if (initialCode) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
-        <h1 className="text-2xl font-semibold mb-3">You're almost in</h1>
-        <p className="text-gray-500 text-center text-sm leading-relaxed mb-8 max-w-sm">
-          Tap the button below to join your kitchen and start cooking together.
-        </p>
-        <div className="w-full max-w-sm space-y-4">
-          <button
-            type="button"
-            onClick={handleJoin}
-            disabled={isPending}
-            className="w-full bg-gray-900 text-white rounded-lg py-3 text-base font-medium disabled:opacity-50"
-          >
-            {isPending ? 'Joining…' : 'Join kitchen'}
-          </button>
-          {error && (
-            <p className="text-red-600 text-sm text-center">{error}</p>
-          )}
-        </div>
+        {error ? (
+          <div className="w-full max-w-sm text-center space-y-4">
+            <p className="text-red-600 text-sm">{error}</p>
+            <button
+              type="button"
+              onClick={handleJoin}
+              disabled={isPending}
+              className="w-full h-12 bg-gray-900 text-white rounded-xl text-sm font-medium disabled:opacity-50"
+            >
+              {isPending ? 'Trying again…' : 'Try again'}
+            </button>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm">Getting you set up…</p>
+        )}
       </main>
     )
   }

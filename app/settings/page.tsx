@@ -70,7 +70,7 @@ export default async function SettingsPage() {
 
         {/* Invite code */}
         <section className="space-y-3">
-          <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Invite code</h2>
+          <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Invite a member</h2>
           <InviteCode code={household.invite_code} kitchenName={household.name} />
         </section>
 
