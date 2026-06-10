@@ -78,6 +78,14 @@ export function EditRecipeForm({ recipe, ingredients, steps }: Props) {
     e.preventDefault()
     setError('')
 
+    const badAmount = ingredientRows.find(
+      (ing) => ing.name.trim() && ing.amount !== '' && !Number.isFinite(Number(ing.amount))
+    )
+    if (badAmount) {
+      setError(`"${badAmount.amount}" is not a valid amount — use a number like 1, 0.5, or 2.25`)
+      return
+    }
+
     const payload = {
       title,
       cuisine_id: cuisineId,
