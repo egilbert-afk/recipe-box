@@ -44,14 +44,16 @@ export default async function RecipePage({
         <Link href="/recipes" className="flex items-center justify-center h-12 w-12 rounded-full text-gray-600 hover:bg-gray-100">
           ←
         </Link>
-        <h1 className="text-lg font-semibold flex-1 truncate">{full.title}</h1>
-        <Link
-          href={`/recipes/${full.id}/edit`}
-          className="flex items-center justify-center h-12 w-12 rounded-full text-gray-500 hover:bg-gray-100"
-          aria-label="Edit recipe"
-        >
-          <Pencil size={20} />
-        </Link>
+        <div className="flex items-center gap-1 flex-1 min-w-0">
+          <h1 className="text-lg font-semibold truncate">{full.title}</h1>
+          <Link
+            href={`/recipes/${full.id}/edit`}
+            className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full text-gray-400 hover:bg-gray-100"
+            aria-label="Edit recipe"
+          >
+            <Pencil size={20} />
+          </Link>
+        </div>
       </header>
 
       <main className="px-4 py-6 space-y-8">
