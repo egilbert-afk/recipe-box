@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { Pencil } from 'lucide-react'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
 import type { RecipeWithDetails } from '@/lib/types'
@@ -46,9 +47,10 @@ export default async function RecipePage({
         <h1 className="text-lg font-semibold flex-1 truncate">{full.title}</h1>
         <Link
           href={`/recipes/${full.id}/edit`}
-          className="text-sm text-gray-500 underline"
+          className="flex items-center justify-center h-12 w-12 rounded-full text-gray-500 hover:bg-gray-100"
+          aria-label="Edit recipe"
         >
-          Edit
+          <Pencil size={20} />
         </Link>
       </header>
 
