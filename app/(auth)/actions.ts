@@ -2,15 +2,9 @@
 
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { trackEvent } from '@/lib/events'
+import { sanitizeInviteCode } from '@/lib/utils'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
-
-// Invite codes are exactly 8 uppercase alphanumeric characters.
-// Validate before interpolating into URLs to prevent parameter injection.
-function sanitizeInviteCode(value: string | null): string | null {
-  if (!value) return null
-  return /^[A-Z0-9]{8}$/.test(value.toUpperCase()) ? value.toUpperCase() : null
-}
 
 export async function signIn(formData: FormData) {
   const email = formData.get('email') as string

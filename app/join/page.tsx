@@ -20,7 +20,7 @@ export default async function JoinPage({
 
   const { data: household } = await serviceClient
     .from('households')
-    .select('id, name')
+    .select('name')
     .eq('invite_code', code.toUpperCase())
     .maybeSingle()
 
