@@ -60,9 +60,21 @@ export function OnboardingForm({ initialCode }: { initialCode?: string }) {
   if (initialCode) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
-        <p className="text-gray-500 text-sm">
-          {error ? error : 'Getting you set up…'}
-        </p>
+        {error ? (
+          <div className="w-full max-w-sm text-center space-y-4">
+            <p className="text-red-600 text-sm">{error}</p>
+            <button
+              type="button"
+              onClick={handleJoin}
+              disabled={isPending}
+              className="w-full h-12 bg-gray-900 text-white rounded-xl text-sm font-medium disabled:opacity-50"
+            >
+              {isPending ? 'Trying again…' : 'Try again'}
+            </button>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm">Getting you set up…</p>
+        )}
       </main>
     )
   }
