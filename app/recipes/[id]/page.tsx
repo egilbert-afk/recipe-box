@@ -50,7 +50,7 @@ export default async function RecipePage({
           className="flex items-center justify-center h-12 w-12 rounded-full text-gray-500 hover:bg-gray-100"
           aria-label="Edit recipe"
         >
-          <Pencil size={18} />
+          <Pencil size={20} />
         </Link>
       </header>
 
