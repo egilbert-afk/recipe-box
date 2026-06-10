@@ -62,7 +62,7 @@ export async function PATCH(
   }
 
   // Full recipe edit operation
-  const edit = body as UpdateRecipeInput
+  const edit = body as unknown as UpdateRecipeInput
 
   if (!edit.title?.trim()) {
     return NextResponse.json({ error: 'Title is required' }, { status: 400 })
