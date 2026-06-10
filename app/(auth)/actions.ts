@@ -5,47 +5,61 @@ import { trackEvent } from '@/lib/events'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 
+// Invite codes are exactly 8 uppercase alphanumeric characters.
+// Validate before interpolating into URLs to prevent parameter injection.
+function sanitizeInviteCode(value: string | null): string | null {
+  if (!value) return null
+  return /^[A-Z0-9]{8}$/.test(value.toUpperCase()) ? value.toUpperCase() : null
+}
+
 export async function signIn(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
+  const code = sanitizeInviteCode(formData.get('code') as string | null)
 
   const supabase = await createSupabaseServerClient()
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    redirect('/login?error=Invalid+email+or+password')
+    const codeParam = code ? `&code=${code}` : ''
+    redirect(`/login?error=Invalid+email+or+password${codeParam}`)
   }
 
-  redirect('/recipes')
+  redirect(code ? `/onboarding?code=${code}` : '/recipes')
 }
 
 export async function signUp(formData: FormData) {
   const email = (formData.get('email') as string) ?? ''
   const password = (formData.get('password') as string) ?? ''
   const confirmPassword = (formData.get('confirm_password') as string) ?? ''
+  const code = sanitizeInviteCode(formData.get('code') as string | null)
+
+  const codeParam = code ? `&code=${code}` : ''
 
   if (!email || !password) {
-    redirect('/signup?error=Email+and+password+are+required')
+    redirect(`/signup?error=Email+and+password+are+required${codeParam}`)
   }
 
   if (password.length < 6) {
-    redirect('/signup?error=Password+must+be+at+least+6+characters')
+    redirect(`/signup?error=Password+must+be+at+least+6+characters${codeParam}`)
   }
 
   if (password !== confirmPassword) {
-    redirect('/signup?error=Passwords+do+not+match')
+    redirect(`/signup?error=Passwords+do+not+match${codeParam}`)
   }
 
   const headersList = await headers()
   const host = headersList.get('host') ?? 'localhost:3000'
   const protocol = host.includes('localhost') ? 'http' : 'https'
-  const emailRedirectTo = `${protocol}://${host}/auth/callback?type=signup`
+  const callbackUrl = code
+    ? `${protocol}://${host}/auth/callback?type=signup&invite_code=${code}`
+    : `${protocol}://${host}/auth/callback?type=signup`
 
   const supabase = await createSupabaseServerClient()
-  const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo } })
+  const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: callbackUrl } })
 
   if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`)
+    redirect(`/signup?error=${encodeURIComponent(error.message)}${codeParam}`)
   }
 
   // When Supabase requires email confirmation, session is null — prompt the user.
@@ -55,7 +69,7 @@ export async function signUp(formData: FormData) {
 
   await trackEvent(data.session.user.id, null, 'account_created')
 
-  redirect('/onboarding')
+  redirect(code ? `/onboarding?code=${code}` : '/onboarding')
 }
 
 export async function signOut() {

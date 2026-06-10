@@ -3,9 +3,9 @@ import { signIn } from '../actions'
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; code?: string }>
 }) {
-  const { error } = await searchParams
+  const { error, code } = await searchParams
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-4">
@@ -19,6 +19,7 @@ export default async function LoginPage({
         )}
 
         <form action={signIn} className="space-y-4">
+          {code && <input type="hidden" name="code" value={code} />}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email
@@ -56,7 +57,7 @@ export default async function LoginPage({
         <div className="text-center">
           <p className="text-sm text-gray-500">
             New to Recipe Box?{' '}
-            <a href="/signup" className="text-gray-900 underline">
+            <a href={code ? `/signup?code=${code}` : '/signup'} className="text-gray-900 underline">
               Sign up
             </a>
           </p>
