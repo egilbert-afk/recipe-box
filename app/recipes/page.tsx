@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Settings } from 'lucide-react'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { SignOutButton } from '@/components/SignOutButton'
 import { CUISINE_LABEL, MEAL_TYPE_LABEL, MEAL_TYPES } from '@/lib/constants'
@@ -69,8 +70,12 @@ export default async function RecipesPage({
               Admin
             </Link>
           )}
-          <Link href="/settings" className="text-sm text-gray-500 underline">
-            Settings
+          <Link
+            href="/settings"
+            className="flex items-center justify-center h-12 w-12 rounded-full text-gray-500 hover:bg-gray-100"
+            aria-label="Settings"
+          >
+            <Settings size={20} />
           </Link>
           <SignOutButton />
         </div>
