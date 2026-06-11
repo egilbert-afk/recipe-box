@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabase as serviceClient } from '@/lib/supabase'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-
-const serviceClient = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 export async function POST(
   _request: NextRequest,
@@ -73,16 +68,26 @@ export async function POST(
     return NextResponse.json({ error: 'Failed to save recipe' }, { status: 500 })
   }
 
+  // Insert ingredients and steps — if either fails, delete the orphaned recipe
+  // so the user never ends up with an incomplete clone.
   if (sourceIngredients?.length) {
-    await serviceClient.from('ingredients').insert(
+    const { error: ingError } = await serviceClient.from('ingredients').insert(
       sourceIngredients.map((ing) => ({ ...ing, recipe_id: cloned.id }))
     )
+    if (ingError) {
+      await serviceClient.from('recipes').delete().eq('id', cloned.id)
+      return NextResponse.json({ error: 'Failed to save recipe' }, { status: 500 })
+    }
   }
 
   if (sourceSteps?.length) {
-    await serviceClient.from('steps').insert(
+    const { error: stepError } = await serviceClient.from('steps').insert(
       sourceSteps.map((step) => ({ ...step, recipe_id: cloned.id }))
     )
+    if (stepError) {
+      await serviceClient.from('recipes').delete().eq('id', cloned.id)
+      return NextResponse.json({ error: 'Failed to save recipe' }, { status: 500 })
+    }
   }
 
   return NextResponse.json({ recipe_id: cloned.id }, { status: 201 })
