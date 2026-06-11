@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { trackEvent } from '@/lib/events'
-import { sanitizeInviteCode } from '@/lib/utils'
+import { sanitizeInviteCode, sanitizeShareToken } from '@/lib/utils'
 
 // Handles Supabase auth redirects (e.g. email confirmation links).
 // The response object must be created first so the Supabase client can
@@ -12,9 +12,14 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const type = searchParams.get('type')
   const inviteCode = sanitizeInviteCode(searchParams.get('invite_code'))
+  const saveToken = sanitizeShareToken(searchParams.get('save_token'))
 
   if (code) {
-    const destination = inviteCode ? `${origin}/onboarding?code=${inviteCode}` : `${origin}/recipes`
+    const destination = inviteCode
+      ? `${origin}/onboarding?code=${inviteCode}`
+      : saveToken
+        ? `${origin}/onboarding?save=${saveToken}`
+        : `${origin}/recipes`
     const response = NextResponse.redirect(destination)
 
     const supabase = createServerClient(

@@ -109,7 +109,7 @@ function AddRecipePageContent() {
       const data = await res.json()
 
       if (!res.ok) {
-        setFetchError(data.error ?? 'Could not parse recipe. Try pasting the text instead.')
+        setFetchError(data.error ?? 'Could not read recipe. Try pasting the text instead.')
         return
       }
 

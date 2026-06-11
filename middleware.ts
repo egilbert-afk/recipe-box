@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  if (!user && !pathname.startsWith('/login') && !pathname.startsWith('/signup') && !pathname.startsWith('/auth') && !pathname.startsWith('/join')) {
+  if (!user && !pathname.startsWith('/login') && !pathname.startsWith('/signup') && !pathname.startsWith('/auth') && !pathname.startsWith('/join') && !pathname.startsWith('/r/')) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
@@ -56,6 +56,12 @@ export async function middleware(request: NextRequest) {
     if (!membership) {
       const url = request.nextUrl.clone()
       url.pathname = '/onboarding'
+      url.search = ''
+      // Preserve the share token so the recipe is saved after onboarding
+      if (pathname.startsWith('/r/')) {
+        const shareToken = pathname.split('/')[2]
+        if (shareToken) url.searchParams.set('save', shareToken)
+      }
       return NextResponse.redirect(url)
     }
   }

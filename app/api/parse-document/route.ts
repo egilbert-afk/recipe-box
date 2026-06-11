@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { parseRecipeFromText, parseRecipeFromImage } from '@/lib/claude'
+import { parseRecipeFromText, parseRecipeFromImage, friendlyClaudeError } from '@/lib/claude'
 import type { SupportedImageMimeType } from '@/lib/claude'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
@@ -39,8 +39,7 @@ export async function POST(request: NextRequest) {
       const recipe = await parseRecipeFromText(body.text)
       return NextResponse.json(recipe)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to parse recipe'
-      return NextResponse.json({ error: message }, { status: 422 })
+      return NextResponse.json({ error: friendlyClaudeError(err) }, { status: 422 })
     }
   }
 
@@ -78,8 +77,7 @@ export async function POST(request: NextRequest) {
       )
       return NextResponse.json(recipe)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to parse recipe'
-      return NextResponse.json({ error: message }, { status: 422 })
+      return NextResponse.json({ error: friendlyClaudeError(err) }, { status: 422 })
     }
   }
 

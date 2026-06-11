@@ -3,7 +3,7 @@ import { useState, useEffect, useTransition } from 'react'
 
 type Mode = 'create' | 'join'
 
-export function OnboardingForm({ initialCode }: { initialCode?: string }) {
+export function OnboardingForm({ initialCode, saveToken }: { initialCode?: string; saveToken?: string }) {
   const [mode, setMode] = useState<Mode>(initialCode ? 'join' : 'create')
   const [name, setName] = useState('')
   const [code, setCode] = useState(initialCode ?? '')
@@ -14,6 +14,8 @@ export function OnboardingForm({ initialCode }: { initialCode?: string }) {
     setMode(next)
     setError('')
   }
+
+  const afterSetup = saveToken ? `/r/${saveToken}?autosave=1` : '/recipes'
 
   function handleCreate() {
     setError('')
@@ -28,7 +30,7 @@ export function OnboardingForm({ initialCode }: { initialCode?: string }) {
         setError(data.error ?? 'Something went wrong. Please try again.')
         return
       }
-      window.location.href = '/recipes'
+      window.location.href = afterSetup
     })
   }
 
@@ -45,7 +47,7 @@ export function OnboardingForm({ initialCode }: { initialCode?: string }) {
         setError(data.error ?? 'Something went wrong. Please try again.')
         return
       }
-      window.location.href = '/recipes'
+      window.location.href = afterSetup
     })
   }
 

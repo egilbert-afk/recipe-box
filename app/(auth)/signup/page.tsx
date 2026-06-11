@@ -3,9 +3,9 @@ import { signUp } from '../actions'
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; message?: string; code?: string }>
+  searchParams: Promise<{ error?: string; message?: string; code?: string; save?: string }>
 }) {
-  const { error, message, code } = await searchParams
+  const { error, message, code, save } = await searchParams
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-4">
@@ -38,6 +38,7 @@ export default async function SignupPage({
 
             <form action={signUp} className="space-y-4">
               {code && <input type="hidden" name="code" value={code} />}
+              {save && <input type="hidden" name="save" value={save} />}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                   Email
@@ -87,7 +88,7 @@ export default async function SignupPage({
 
             <p className="text-center text-sm text-gray-500">
               Already have an account?{' '}
-              <a href={code ? `/login?code=${code}` : '/login'} className="text-gray-900 underline">
+              <a href={code ? `/login?code=${code}` : save ? `/login?save=${save}` : '/login'} className="text-gray-900 underline">
                 Sign in
               </a>
             </p>
