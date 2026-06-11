@@ -32,6 +32,7 @@ export default async function ArchivePage() {
 
   return (
     <div className="min-h-screen bg-white pb-20">
+      <div className="max-w-lg mx-auto">
       <header className="flex items-center gap-3 px-4 py-4 border-b border-gray-200">
         <Link
           href="/recipes"
@@ -73,6 +74,7 @@ export default async function ArchivePage() {
           </ul>
         )}
       </main>
+      </div>
     </div>
   )
 }
