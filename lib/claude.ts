@@ -30,7 +30,7 @@ The JSON must have exactly these fields:
 {
   "title": string,
   "cuisine_id": one of: "american" | "italian" | "mexican" | "mediterranean" | "asian" | "french" | "indian" | "other",
-  "meal_type_id": one of: "breakfast" | "entree" | "side" | "dessert" | "cocktail",
+  "meal_type_id": one of: "breakfast" | "entree" | "side" | "salad" | "dessert" | "cocktail",
   "servings": number (integer, pick the larger if a range),
   "ingredients": [
     {

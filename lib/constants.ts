@@ -15,6 +15,7 @@ export const MEAL_TYPES: { id: MealTypeId; label: string }[] = [
   { id: 'breakfast', label: 'Breakfast' },
   { id: 'entree', label: 'Entrée' },
   { id: 'side', label: 'Side' },
+  { id: 'salad', label: 'Salad' },
   { id: 'dessert', label: 'Dessert' },
   { id: 'cocktail', label: 'Cocktail' },
 ]

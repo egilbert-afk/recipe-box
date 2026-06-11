@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase as serviceClient } from '@/lib/supabase'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { trackEvent } from '@/lib/events'
 
 export async function POST(
   _request: NextRequest,
@@ -88,6 +89,12 @@ export async function POST(
       await serviceClient.from('recipes').delete().eq('id', cloned.id)
       return NextResponse.json({ error: 'Failed to save recipe' }, { status: 500 })
     }
+  }
+
+  try {
+    await trackEvent(user.id, membership.household_id, 'recipe_saved_from_share')
+  } catch (err) {
+    console.error('trackEvent failed for recipe_saved_from_share:', err)
   }
 
   return NextResponse.json({ recipe_id: cloned.id }, { status: 201 })

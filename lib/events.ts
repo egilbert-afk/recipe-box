@@ -8,6 +8,9 @@ export const VALID_EVENTS = [
   'recipe_added',
   'cooking_mode_started',
   'search_performed',
+  'recipe_shared',
+  'recipe_saved_from_share',
+  'signup_from_share',
 ] as const
 
 export type EventName = typeof VALID_EVENTS[number]

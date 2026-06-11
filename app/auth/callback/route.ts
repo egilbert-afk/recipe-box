@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
       if (type === 'signup' && sessionData.user) {
         try {
           await trackEvent(sessionData.user.id, null, 'account_created')
+          if (saveToken) await trackEvent(sessionData.user.id, null, 'signup_from_share')
         } catch (err) {
           console.error('trackEvent failed after signup confirmation:', err)
         }
