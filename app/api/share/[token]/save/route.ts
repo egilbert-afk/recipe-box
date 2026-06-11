@@ -91,7 +91,11 @@ export async function POST(
     }
   }
 
-  await trackEvent(user.id, membership.household_id, 'recipe_saved_from_share')
+  try {
+    await trackEvent(user.id, membership.household_id, 'recipe_saved_from_share')
+  } catch (err) {
+    console.error('trackEvent failed for recipe_saved_from_share:', err)
+  }
 
   return NextResponse.json({ recipe_id: cloned.id }, { status: 201 })
 }

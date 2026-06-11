@@ -67,8 +67,12 @@ export async function signUp(formData: FormData) {
     redirect('/signup?message=Check+your+email+to+confirm+your+account')
   }
 
-  await trackEvent(data.session.user.id, null, 'account_created')
-  if (save) await trackEvent(data.session.user.id, null, 'signup_from_share')
+  try {
+    await trackEvent(data.session.user.id, null, 'account_created')
+    if (save) await trackEvent(data.session.user.id, null, 'signup_from_share')
+  } catch (err) {
+    console.error('trackEvent failed after signup:', err)
+  }
 
   if (code) redirect(`/onboarding?code=${code}`)
   if (save) redirect(`/onboarding?save=${save}`)

@@ -54,7 +54,11 @@ export async function POST(
     return NextResponse.json({ error: 'Failed to generate share link' }, { status: 500 })
   }
 
-  await trackEvent(user.id, membership.household_id, 'recipe_shared')
+  try {
+    await trackEvent(user.id, membership.household_id, 'recipe_shared')
+  } catch (err) {
+    console.error('trackEvent failed for recipe_shared:', err)
+  }
 
   return NextResponse.json({ share_token: updated.share_token }, { status: 200 })
 }
