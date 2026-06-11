@@ -12,6 +12,7 @@ export type MealTypeId =
   | 'breakfast'
   | 'entree'
   | 'side'
+  | 'salad'
   | 'dessert'
   | 'cocktail'
 
