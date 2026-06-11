@@ -104,6 +104,18 @@ export function stripHtml(html: string): string {
     .slice(0, 20000) // Cap at 20k chars — enough for any recipe
 }
 
+// Translates Anthropic API errors to messages safe to surface to the user.
+export function friendlyClaudeError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : ''
+  if (raw.includes('credit balance') || raw.includes('billing')) {
+    return 'Recipe import is temporarily unavailable. Please try again later or add the recipe manually.'
+  }
+  if (raw.includes('overloaded') || raw.includes('529')) {
+    return 'The AI service is busy right now. Please try again in a moment.'
+  }
+  return raw || 'Failed to read recipe'
+}
+
 function isValidParsedRecipe(data: unknown): data is ParsedRecipe {
   if (!data || typeof data !== 'object') return false
   const d = data as Record<string, unknown>

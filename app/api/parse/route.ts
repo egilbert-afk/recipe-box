@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { parseRecipeFromUrl } from '@/lib/claude'
+import { parseRecipeFromUrl, friendlyClaudeError } from '@/lib/claude'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function POST(request: NextRequest) {
@@ -38,7 +38,6 @@ export async function POST(request: NextRequest) {
     const recipe = await parseRecipeFromUrl(url)
     return NextResponse.json(recipe)
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to parse recipe'
-    return NextResponse.json({ error: message }, { status: 422 })
+    return NextResponse.json({ error: friendlyClaudeError(err) }, { status: 422 })
   }
 }

@@ -9,6 +9,7 @@ import { toFraction } from '@/lib/scaler'
 import { ServingsPicker } from '@/components/ServingsPicker'
 import { ArchiveButton } from '@/components/ArchiveButton'
 import { RecipeNotes } from '@/components/RecipeNotes'
+import { ShareButton } from './ShareButton'
 
 export default async function RecipePage({
   params,
@@ -55,6 +56,7 @@ export default async function RecipePage({
           >
             <Pencil size={20} />
           </Link>
+          <ShareButton recipeId={full.id} recipeTitle={full.title} />
         </div>
       </header>
 

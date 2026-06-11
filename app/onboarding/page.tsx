@@ -3,8 +3,8 @@ import { OnboardingForm } from './OnboardingForm'
 export default async function OnboardingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ code?: string }>
+  searchParams: Promise<{ code?: string; save?: string }>
 }) {
-  const { code } = await searchParams
-  return <OnboardingForm initialCode={code} />
+  const { code, save } = await searchParams
+  return <OnboardingForm initialCode={code} saveToken={save} />
 }
