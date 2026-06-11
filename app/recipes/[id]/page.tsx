@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
 import type { RecipeWithDetails } from '@/lib/types'
 import { formatIngredient } from '@/lib/formatters'
+import { toFraction } from '@/lib/scaler'
 import { ServingsPicker } from '@/components/ServingsPicker'
 import { ArchiveButton } from '@/components/ArchiveButton'
 import { RecipeNotes } from '@/components/RecipeNotes'
@@ -92,7 +93,7 @@ export default async function RecipePage({
               <li key={ing.id} className="text-base text-gray-800">
                 {formatIngredient(
                   ing.name,
-                  ing.amount !== null ? String(ing.amount) : '',
+                  ing.amount !== null ? toFraction(ing.amount) : '',
                   ing.unit
                 )}
               </li>
