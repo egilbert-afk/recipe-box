@@ -252,6 +252,7 @@ npm run dev
 
 ## Future ideas
 
+- Context-aware cooking mode labels — "Start mixing" instead of "Start cooking" for cocktail recipes; could extend to other categories (e.g. "Start baking" for desserts/breads)
 - Welcome banner for new household members — after joining via an invite link, show a brief welcome message on first arrival at the recipes page (e.g. "Welcome to [Kitchen Name]!") so new members feel oriented; no extra click, just a moment of acknowledgment on the recipes page using a `?welcome=1` param in the post-join redirect
 - iOS Share Sheet extension for one-tap capture from Safari
 - Photo capture (polished) — basic photo upload already works via the document mode; this would add a dedicated camera button that skips the file picker, opening the camera directly for a more native feel
