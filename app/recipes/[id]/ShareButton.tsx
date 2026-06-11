@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Share2 } from 'lucide-react'
+import { Share } from 'lucide-react'
 
 type Status = 'idle' | 'loading' | 'copied' | 'error'
 
@@ -42,7 +42,7 @@ export function ShareButton({ recipeId, recipeTitle }: { recipeId: string; recip
         className="flex items-center justify-center h-12 w-12 rounded-full text-gray-400 hover:bg-gray-100 disabled:opacity-50"
         aria-label="Share recipe"
       >
-        <Share2 size={20} />
+        <Share size={20} />
       </button>
       {status === 'copied' && <span className="text-xs text-gray-500 -mt-1">Copied!</span>}
       {status === 'error' && <span className="text-xs text-red-500 -mt-1">Failed</span>}
