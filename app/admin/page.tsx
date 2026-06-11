@@ -29,6 +29,9 @@ const EVENT_LABEL: Record<string, string> = {
   recipe_added: 'Recipe added',
   cooking_mode_started: 'Cooking mode started',
   search_performed: 'Search performed',
+  recipe_shared: 'Recipe shared',
+  recipe_saved_from_share: 'Recipe saved from share',
+  signup_from_share: 'Signup from share',
 }
 
 export default async function AdminPage() {

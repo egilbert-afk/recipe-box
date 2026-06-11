@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { supabase } from '@/lib/supabase'
+import { trackEvent } from '@/lib/events'
 
 export async function POST(
   _request: NextRequest,
@@ -52,6 +53,8 @@ export async function POST(
   if (error || !updated) {
     return NextResponse.json({ error: 'Failed to generate share link' }, { status: 500 })
   }
+
+  await trackEvent(user.id, membership.household_id, 'recipe_shared')
 
   return NextResponse.json({ share_token: updated.share_token }, { status: 200 })
 }

@@ -68,6 +68,7 @@ export async function signUp(formData: FormData) {
   }
 
   await trackEvent(data.session.user.id, null, 'account_created')
+  if (save) await trackEvent(data.session.user.id, null, 'signup_from_share')
 
   if (code) redirect(`/onboarding?code=${code}`)
   if (save) redirect(`/onboarding?save=${save}`)
