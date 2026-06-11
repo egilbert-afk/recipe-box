@@ -56,7 +56,7 @@ export default async function SettingsPage() {
         <h1 className="text-lg font-semibold">Kitchen Settings</h1>
       </header>
 
-      <main className="px-4 py-6 space-y-8 max-w-lg">
+      <main className="px-4 py-6 space-y-8 max-w-lg mx-auto">
 
         {/* Kitchen name */}
         <section className="space-y-3">

@@ -40,6 +40,7 @@ export default async function RecipePage({
 
   return (
     <div className="min-h-screen bg-white pb-20">
+      <div className="max-w-lg mx-auto">
       <header className="flex items-center gap-3 px-4 py-4 border-b border-gray-200">
         <Link href="/recipes" className="flex items-center justify-center h-12 w-12 rounded-full text-gray-600 hover:bg-gray-100">
           ←
@@ -115,6 +116,7 @@ export default async function RecipePage({
 
         <ArchiveButton recipeId={full.id} archived={full.archived} />
       </main>
+      </div>
     </div>
   )
 }
