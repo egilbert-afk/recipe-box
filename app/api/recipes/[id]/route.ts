@@ -3,6 +3,56 @@ import { supabase } from '@/lib/supabase'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import type { UpdateRecipeInput } from '@/lib/types'
 
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+
+  const serverClient = await createSupabaseServerClient()
+  const { data: { user } } = await serverClient.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { data: membership } = await supabase
+    .from('household_members')
+    .select('household_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!membership) {
+    return NextResponse.json({ error: 'No household found' }, { status: 404 })
+  }
+
+  const { data: recipe } = await supabase
+    .from('recipes')
+    .select('id, archived')
+    .eq('id', id)
+    .eq('household_id', membership.household_id)
+    .maybeSingle()
+
+  if (!recipe) {
+    return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
+  }
+
+  if (!recipe.archived) {
+    return NextResponse.json({ error: 'Only archived recipes can be permanently deleted' }, { status: 409 })
+  }
+
+  const { error } = await supabase
+    .from('recipes')
+    .delete()
+    .eq('id', id)
+    .eq('household_id', membership.household_id)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return new NextResponse(null, { status: 204 })
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export function SaveRecipeButton({ token, autosave }: { token: string; autosave?: boolean }) {
+export function SaveRecipeButton({ token }: { token: string }) {
   const router = useRouter()
-  const [saving, setSaving] = useState(autosave ?? false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSave() {
@@ -24,10 +24,6 @@ export function SaveRecipeButton({ token, autosave }: { token: string; autosave?
       setSaving(false)
     }
   }
-
-  useEffect(() => {
-    if (autosave) handleSave()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-2">

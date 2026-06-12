@@ -21,7 +21,7 @@ export async function signIn(formData: FormData) {
   }
 
   if (code) redirect(`/onboarding?code=${code}`)
-  if (save) redirect(`/r/${save}?autosave=1`)
+  if (save) redirect(`/r/${save}`)
   redirect('/recipes')
 }
 

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
 import { ArchiveButton } from '@/components/ArchiveButton'
+import { DeleteRecipeButton } from '@/components/DeleteRecipeButton'
 import type { CuisineId, MealTypeId } from '@/lib/types'
 
 type ArchivedRecipe = {
@@ -67,7 +68,10 @@ export default async function ArchivePage() {
                       <p className="text-sm text-gray-400 italic">"{recipe.archive_note}"</p>
                     )}
                   </div>
-                  <ArchiveButton recipeId={recipe.id} archived={true} redirectAfter="/archive" />
+                  <div className="flex flex-col items-end gap-2">
+                    <ArchiveButton recipeId={recipe.id} archived={true} redirectAfter="/archive" />
+                    <DeleteRecipeButton recipeId={recipe.id} />
+                  </div>
                 </div>
               </li>
             ))}
