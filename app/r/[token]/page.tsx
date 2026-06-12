@@ -13,13 +13,10 @@ type Step = { id: string; instruction: string; order_index: number }
 
 export default async function SharedRecipePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ token: string }>
-  searchParams: Promise<{ autosave?: string }>
 }) {
   const { token } = await params
-  const { autosave } = await searchParams
 
   const { data: recipe } = await serviceClient
     .from('recipes')
@@ -114,7 +111,7 @@ export default async function SharedRecipePage({
             {alreadySaved ? (
               <p className="text-sm text-gray-500 text-center">This recipe is already in your kitchen.</p>
             ) : user ? (
-              <SaveRecipeButton token={token} autosave={autosave === '1'} />
+              <SaveRecipeButton token={token} />
             ) : (
               <div className="space-y-3 text-center">
                 <p className="text-sm text-gray-500">Save this recipe to your kitchen on Recipe Box.</p>
