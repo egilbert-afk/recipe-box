@@ -144,6 +144,43 @@ UI improvements woven throughout, with a focused UI pass (Layer 12) before beta 
 
 ---
 
+## "Made it" — tried vs. keeper signal
+
+Beta feedback surfaced a clear user behavior: people save recipes they want to try, cook them once, and if they don't make the cut they want them gone. The archive model doesn't match this mental model — it hides rather than removes.
+
+**The insight:** The meaningful distinction isn't archived vs. active. It's *untried* vs. *tried and keeping* vs. *tried and done with it.*
+
+**Why cook_sessions can't be the signal:** Beta users cook from the recipe page directly without entering cook mode, so `cook_sessions` doesn't fire reliably. The only trustworthy signal is one explicitly given by the user.
+
+**Planned solution — "Made it" button:**
+- A single "Made it" tap on the recipe page, available any time
+- After tapping: a one-question follow-up — "Keeper?" → Yes / Not sure / Remove it
+- "Remove it" flows directly into archive (and from archive, permanent delete is available)
+- "Untried" recipes = those with no "Made it" tap — derivable without any tagging system
+- Secondary opportunity: a prompted "untried" list ("You have 6 recipes you haven't tried — want to pick one?") to drive engagement and help users get value from recipes they saved and forgot
+
+**Why this matters for engagement:** Prompting users toward untried recipes creates a natural reason to open the app between cooking sessions and builds the habit of using Mise as the source of truth for what to cook next.
+
+**Not built yet.** Capture `cook_sessions` events now. "Made it" UI is a future layer.
+
+---
+
+## Cook mode — voice interaction (future direction)
+
+Beta observation: users follow recipes from the recipe page without entering cook mode. Cook mode as a required workflow has friction.
+
+**Future direction — voice-enabled cook mode:**
+- Near-term: Web Speech API (no cost, built into iOS Safari) reads steps aloud and listens for "next" / "repeat that" voice commands — fully hands-free, no screen touching required
+- Further out: conversational layer powered by Claude, with full recipe context — "how do I know when the onions are ready?", "can I substitute sour cream for the yogurt?"
+
+**Why this connects to the product:** The hands-free design principle ("one semi-clean hand available at most") is already baked into the CLAUDE.md. Voice is its natural completion. It also gives users a compelling reason to open cook mode, which would make `cook_sessions` a reliable signal again — unlocking the derived "untried" logic without requiring the "Made it" button.
+
+**The foundation is already set:** Cook mode is a separate route with step-by-step structure. No architectural changes needed to add voice later.
+
+**Not built yet.** Flag for post-beta evaluation once cook mode usage data is available.
+
+---
+
 ## Messaging (to develop)
 
 Detailed product benefits, reasons to believe, and customer-facing copy to be developed once beta feedback shapes the narrative. Key inputs: what do beta users say unprompted when describing the app to someone else?
