@@ -27,7 +27,7 @@ export function DeleteRecipeButton({ recipeId }: { recipeId: string }) {
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="h-10 px-4 rounded-full border border-red-200 text-sm font-medium text-red-600"
+        className="h-12 px-4 rounded-full border border-red-200 text-sm font-medium text-red-600"
       >
         Delete permanently
       </button>
