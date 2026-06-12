@@ -22,7 +22,7 @@ export async function DELETE(
     .maybeSingle()
 
   if (!membership) {
-    return NextResponse.json({ error: 'No household found' }, { status: 403 })
+    return NextResponse.json({ error: 'No household found' }, { status: 404 })
   }
 
   const { data: recipe } = await supabase
@@ -39,9 +39,6 @@ export async function DELETE(
   if (!recipe.archived) {
     return NextResponse.json({ error: 'Only archived recipes can be permanently deleted' }, { status: 409 })
   }
-
-  await supabase.from('ingredients').delete().eq('recipe_id', id)
-  await supabase.from('steps').delete().eq('recipe_id', id)
 
   const { error } = await supabase
     .from('recipes')

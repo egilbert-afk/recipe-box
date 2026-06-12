@@ -17,6 +17,7 @@ export function DeleteRecipeButton({ recipeId }: { recipeId: string }) {
         setError(data.error ?? 'Something went wrong')
         return
       }
+      setConfirming(false)
       router.refresh()
     })
   }

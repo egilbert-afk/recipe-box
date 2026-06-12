@@ -15,7 +15,7 @@ export function OnboardingForm({ initialCode, saveToken }: { initialCode?: strin
     setError('')
   }
 
-  const afterSetup = saveToken ? `/r/${saveToken}?autosave=1` : '/recipes'
+  const afterSetup = saveToken ? `/r/${saveToken}` : '/recipes'
 
   function handleCreate() {
     setError('')

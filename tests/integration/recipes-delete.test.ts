@@ -59,7 +59,6 @@ function setupFrom({
       }
       return makeDeleteChain(finalDeleteError ? { error: finalDeleteError } : { error: null }) as never
     }
-    // ingredients and steps delete chains
     return makeDeleteChain() as never
   })
 }
@@ -82,10 +81,10 @@ describe('DELETE /api/recipes/[id]', () => {
     expect(res.status).toBe(401)
   })
 
-  it('returns 403 when user has no household', async () => {
+  it('returns 404 when user has no household', async () => {
     setupFrom({ membership: null, recipe: null })
     const res = await DELETE(makeRequest('abc-123'), { params: Promise.resolve({ id: 'abc-123' }) })
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(404)
   })
 
   it('returns 404 when recipe is not found', async () => {
