@@ -16,6 +16,7 @@ vi.mock('@/lib/events', () => ({
 
 import { supabase } from '@/lib/supabase'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { trackEvent } from '@/lib/events'
 
 const mockFrom = vi.mocked(supabase.from)
 const mockServerClient = vi.mocked(createSupabaseServerClient)
@@ -81,12 +82,15 @@ function setupFrom({
   ingredients = INGREDIENTS as object[],
   steps = STEPS as object[],
   cloneResult = { data: { id: 'clone-1' }, error: null } as object,
+  cloneInsertChain = undefined as Record<string, unknown> | undefined,
   ingredientInsertError = null as object | null,
   stepInsertError = null as object | null,
 } = {}) {
   // Track per-table call counts so the same table can serve different roles
   // across multiple calls (e.g. recipes: lookup → insert → rollback delete).
   const counts = { recipes: 0, ingredients: 0, steps: 0 }
+  // Populated during route execution when the handler issues its rollback delete.
+  const rollback = { chain: null as Record<string, unknown> | null }
 
   mockFrom.mockImplementation((table: string) => {
     if (table === 'household_members') {
@@ -95,8 +99,9 @@ function setupFrom({
     if (table === 'recipes') {
       counts.recipes++
       if (counts.recipes === 1) return makeSelectSingle({ data: source, error: null }) as never
-      if (counts.recipes === 2) return makeInsertSingle(cloneResult) as never
-      return makeWriteChain() as never // rollback delete on ingredient/step failure
+      if (counts.recipes === 2) return (cloneInsertChain ?? makeInsertSingle(cloneResult)) as never
+      rollback.chain = makeWriteChain()
+      return rollback.chain as never // absorbs the rollback DELETE issued by the handler
     }
     if (table === 'ingredients') {
       counts.ingredients++
@@ -111,7 +116,7 @@ function setupFrom({
     return makeWriteChain() as never
   })
 
-  return counts
+  return { counts, rollback }
 }
 
 function makeRequest(token: string) {
@@ -169,18 +174,42 @@ describe('POST /api/share/[token]/save', () => {
   })
 
   it('returns 500 and rolls back the orphaned recipe when ingredient insert fails', async () => {
-    const counts = setupFrom({ ingredientInsertError: { message: 'DB error' } })
+    const { counts, rollback } = setupFrom({ ingredientInsertError: { message: 'DB error' } })
     const res = await POST(makeRequest('abc'), { params: Promise.resolve({ token: 'abc' }) })
     expect(res.status).toBe(500)
     expect(await res.json()).toMatchObject({ error: 'Failed to save recipe' })
     expect(counts.recipes).toBe(3) // lookup + insert + rollback delete
+    expect(rollback.chain?.delete).toHaveBeenCalled()
   })
 
   it('returns 500 and rolls back the orphaned recipe when step insert fails', async () => {
-    const counts = setupFrom({ stepInsertError: { message: 'DB error' } })
+    const { counts, rollback } = setupFrom({ stepInsertError: { message: 'DB error' } })
     const res = await POST(makeRequest('abc'), { params: Promise.resolve({ token: 'abc' }) })
     expect(res.status).toBe(500)
     expect(await res.json()).toMatchObject({ error: 'Failed to save recipe' })
     expect(counts.recipes).toBe(3) // lookup + insert + rollback delete
+    expect(rollback.chain?.delete).toHaveBeenCalled()
+  })
+
+  it('does not copy share_token to the cloned recipe', async () => {
+    const cloneChain = makeInsertSingle({ data: { id: 'clone-1' }, error: null })
+    setupFrom({ cloneInsertChain: cloneChain })
+    await POST(makeRequest('abc'), { params: Promise.resolve({ token: 'abc' }) })
+    const insertArg = (cloneChain.insert as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    expect(insertArg).not.toHaveProperty('share_token')
+  })
+
+  it('returns 201 even when trackEvent throws', async () => {
+    vi.mocked(trackEvent).mockRejectedValueOnce(new Error('analytics down'))
+    setupFrom()
+    const res = await POST(makeRequest('abc'), { params: Promise.resolve({ token: 'abc' }) })
+    expect(res.status).toBe(201)
+  })
+
+  it('returns 500 when the recipe clone returns null data with no error', async () => {
+    setupFrom({ cloneResult: { data: null, error: null } })
+    const res = await POST(makeRequest('abc'), { params: Promise.resolve({ token: 'abc' }) })
+    expect(res.status).toBe(500)
+    expect(await res.json()).toMatchObject({ error: 'Failed to save recipe' })
   })
 })
