@@ -27,6 +27,40 @@ function emptyStep(id: number): StepRow {
   return { id, instruction: '' }
 }
 
+// Resize to ≤1200px on the longest side and re-encode as JPEG at 85% quality
+// before upload so two photos stay well under Vercel's 4.5 MB body limit.
+async function compressImage(file: File): Promise<{ data: string; mimeType: string }> {
+  const MAX_PX = 1200
+  const QUALITY = 0.85
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+      if (width > MAX_PX || height > MAX_PX) {
+        if (width >= height) {
+          height = Math.round((height * MAX_PX) / width)
+          width = MAX_PX
+        } else {
+          width = Math.round((width * MAX_PX) / height)
+          height = MAX_PX
+        }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { reject(new Error('Canvas not available')); return }
+      ctx.drawImage(img, 0, 0, width, height)
+      const dataUrl = canvas.toDataURL('image/jpeg', QUALITY)
+      resolve({ data: dataUrl.split(',')[1], mimeType: 'image/jpeg' })
+    }
+    img.onerror = reject
+    img.src = url
+  })
+}
+
 export default function AddRecipePage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-white" />}>
@@ -144,29 +178,25 @@ function AddRecipePageContent() {
     setUploadError('')
     setUploading(true)
     try {
-      const images = await Promise.all(
-        imageFiles.map(
-          (file) =>
-            new Promise<{ data: string; mimeType: string }>((resolve, reject) => {
-              const reader = new FileReader()
-              reader.onload = () =>
-                resolve({ data: (reader.result as string).split(',')[1], mimeType: file.type })
-              reader.onerror = reject
-              reader.readAsDataURL(file)
-            })
-        )
-      )
+      const images = await Promise.all(imageFiles.map(compressImage))
       const res = await fetch('/api/parse-document', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ images }),
       })
-      const data = await res.json()
-      if (!res.ok) {
-        setUploadError(data.error ?? 'Could not read photo. Try pasting the text instead.')
+      // res.json() throws when Vercel rejects an oversized body with an HTML error page
+      let data: Record<string, unknown>
+      try {
+        data = await res.json()
+      } catch {
+        setUploadError('Could not read photo — try using fewer images or switching to text paste.')
         return
       }
-      prefillForm(data)
+      if (!res.ok) {
+        setUploadError((data.error as string) ?? 'Could not read photo. Try pasting the text instead.')
+        return
+      }
+      prefillForm(data as unknown as CreateRecipeInput)
     } catch {
       setUploadError('Something went wrong reading the photo. Try again.')
     } finally {
