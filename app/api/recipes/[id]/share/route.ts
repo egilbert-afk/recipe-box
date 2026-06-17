@@ -39,6 +39,11 @@ export async function POST(
 
   // Return existing token if already set (idempotent)
   if (recipe.share_token) {
+    try {
+      await trackEvent(user.id, membership.household_id, 'recipe_shared')
+    } catch (err) {
+      console.error('trackEvent failed for recipe_shared:', err)
+    }
     return NextResponse.json({ share_token: recipe.share_token }, { status: 200 })
   }
 
