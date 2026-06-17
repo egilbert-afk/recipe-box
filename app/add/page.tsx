@@ -178,18 +178,27 @@ function AddRecipePageContent() {
     setUploadError('')
     setUploading(true)
     try {
-      const images = await Promise.all(imageFiles.map(compressImage))
+      const images: { data: string; mimeType: string }[] = []
+      for (const file of imageFiles) {
+        images.push(await compressImage(file))
+      }
       const res = await fetch('/api/parse-document', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ images }),
       })
-      // res.json() throws when Vercel rejects an oversized body with an HTML error page
       let data: Record<string, unknown>
       try {
         data = await res.json()
       } catch {
-        setUploadError('Could not read photo — try using fewer images or switching to text paste.')
+        // res.json() throws when the response body isn't JSON — most commonly a
+        // Vercel 413 HTML error page when the payload is too large, but also a
+        // truncated body from a network drop. Use the status code to distinguish.
+        if (res.status === 413) {
+          setUploadError('Images are too large — try using fewer photos.')
+        } else {
+          setUploadError('Something went wrong reading the photo. Try again.')
+        }
         return
       }
       if (!res.ok) {
