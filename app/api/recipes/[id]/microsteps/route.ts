@@ -42,6 +42,7 @@ export async function POST(
     .maybeSingle()
 
   if (!recipe) return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
+  if (!recipe.servings) return NextResponse.json({ error: 'Recipe has no base serving count' }, { status: 422 })
 
   // Return cached microsteps if available for this recipe+servings combination
   const { data: cached } = await supabase
