@@ -165,19 +165,43 @@ Beta feedback surfaced a clear user behavior: people save recipes they want to t
 
 ---
 
-## Cook mode — voice interaction (future direction)
+## Cook mode — voice interaction (next to build)
 
 Beta observation: users follow recipes from the recipe page without entering cook mode. Cook mode as a required workflow has friction.
 
-**Future direction — voice-enabled cook mode:**
-- Near-term: Web Speech API (no cost, built into iOS Safari) reads steps aloud and listens for "next" / "repeat that" voice commands — fully hands-free, no screen touching required
-- Further out: conversational layer powered by Claude, with full recipe context — "how do I know when the onions are ready?", "can I substitute sour cream for the yogurt?"
+**The vision:** Enter cook mode, put your phone down, and never touch it again. The app reads each step aloud, listens for "next," and guides you through the recipe completely hands-free. Scaled ingredient amounts are read as part of the step — you never need to check quantities on screen.
 
-**Why this connects to the product:** The hands-free design principle ("one semi-clean hand available at most") is already baked into the CLAUDE.md. Voice is its natural completion. It also gives users a compelling reason to open cook mode, which would make `cook_sessions` a reliable signal again — unlocking the derived "untried" logic without requiring the "Made it" button.
+**Why microsteps:** Conventional recipe steps are often compound — "combine salt, sugar, cumin, and lemon juice in a bowl." For voice guidance these need to be atomic: one action, one instruction. "Add half a teaspoon of salt." "Add one teaspoon of sugar." Each can be read naturally and acted on immediately.
 
-**The foundation is already set:** Cook mode is a separate route with step-by-step structure. No architectural changes needed to add voice later.
+**Key design decision — microsteps are ephemeral:**
+- The recipe view always shows conventional steps (what users expect from a recipe)
+- Microsteps only exist inside cook mode — generated on demand by Claude when you tap "Start Cooking"
+- Never stored in the database; conventional steps remain the source of truth
+- Works on every recipe already in the app with no re-ingestion required
+- Scaled amounts are baked into the microstep text at generation time (no separate scaling math at read time)
 
-**Not built yet.** Flag for post-beta evaluation once cook mode usage data is available.
+**On-demand generation:**
+- One Claude call when cook mode starts — sends the conventional steps + target servings, gets back atomic steps with scaled amounts
+- Latency: 5–8 seconds on first cook for a typical recipe; a "Preparing your recipe…" loading state covers this
+- Cache generated microsteps in the database silently on first cook so subsequent sessions are instant
+
+**Minimum build for self-testing:**
+1. Claude decomposes conventional steps into microsteps with scaled amounts on cook mode entry
+2. Web Speech API (browser-native, free) reads each microstep aloud automatically as it loads
+3. Voice "next" command advances to the next step; no screen touch required
+4. Visible "listening…" indicator so the cook knows the mic is active
+
+No settings toggle, no user-facing "microstep mode" concept — just cook mode behaving this way. Gate behind primary user's account only while validating.
+
+**What to learn from self-testing:**
+- Is decomposition quality good enough on real recipes? (Some steps are parallel or conditional and may not decompose cleanly)
+- Does voice "next" work reliably in kitchen noise and at phone distance?
+- Is automatic TTS on step load the right behavior, or should it be on demand?
+- Is the entry latency acceptable?
+
+**Further out:** Conversational layer powered by Claude with full recipe context — "how do I know when the onions are ready?", "can I substitute sour cream for the yogurt?" Voice is a natural completion of the hands-free design principle already baked into CLAUDE.md.
+
+**Why this matters for the product:** Gives users a compelling reason to enter cook mode, which would make `cook_sessions` a reliable engagement signal again — unlocking derived "untried" logic without requiring a "Made it" button tap.
 
 ---
 
