@@ -33,6 +33,16 @@ export async function POST(
     return NextResponse.json({ error: 'servings must be an integer between 1 and 20' }, { status: 400 })
   }
 
+  // Verify ownership before any cache access — prevents cross-household reads
+  const { data: recipe } = await supabase
+    .from('recipes')
+    .select('id, servings')
+    .eq('id', id)
+    .eq('household_id', membership.household_id)
+    .maybeSingle()
+
+  if (!recipe) return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
+
   // Return cached microsteps if available for this recipe+servings combination
   const { data: cached } = await supabase
     .from('recipe_microsteps')
@@ -44,16 +54,6 @@ export async function POST(
   if (cached) {
     return NextResponse.json({ steps: cached.steps })
   }
-
-  // Verify recipe belongs to this household and get base servings
-  const { data: recipe } = await supabase
-    .from('recipes')
-    .select('id, servings')
-    .eq('id', id)
-    .eq('household_id', membership.household_id)
-    .maybeSingle()
-
-  if (!recipe) return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
 
   const { data: steps } = await supabase
     .from('steps')
@@ -76,9 +76,13 @@ export async function POST(
   }
 
   // Cache for future cooks at this serving count (upsert handles the rare race condition)
-  await supabase
+  const { error: upsertError } = await supabase
     .from('recipe_microsteps')
     .upsert({ recipe_id: id, servings, steps: microsteps }, { onConflict: 'recipe_id,servings' })
+
+  if (upsertError) {
+    console.error('Failed to cache microsteps:', upsertError.message)
+  }
 
   return NextResponse.json({ steps: microsteps })
 }

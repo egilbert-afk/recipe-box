@@ -169,11 +169,18 @@ export async function PATCH(
   }
 
   // Replace ingredients and steps; clear microstep cache since steps changed
-  await Promise.all([
+  const [ingredientsDelete, stepsDelete, microstepsDelete] = await Promise.all([
     supabase.from('ingredients').delete().eq('recipe_id', id),
     supabase.from('steps').delete().eq('recipe_id', id),
     supabase.from('recipe_microsteps').delete().eq('recipe_id', id),
   ])
+
+  if (ingredientsDelete.error || stepsDelete.error) {
+    return NextResponse.json({ error: 'Failed to update recipe' }, { status: 500 })
+  }
+  if (microstepsDelete.error) {
+    console.error('Failed to clear microstep cache:', microstepsDelete.error.message)
+  }
 
   if (edit.ingredients?.length) {
     const { error: ingredientsError } = await supabase.from('ingredients').insert(

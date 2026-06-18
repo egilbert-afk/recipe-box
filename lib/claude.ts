@@ -148,16 +148,21 @@ function isValidParsedRecipe(data: unknown): data is ParsedRecipe {
   return true
 }
 
+// Strips markdown fences Claude occasionally adds despite instructions, then JSON-parses.
+// Using \w+ instead of json so ```javascript and similar variants are also handled.
+function stripFencesAndParse(rawText: string): unknown {
+  const cleaned = rawText.replace(/^```(?:\w+)?\n?/i, '').replace(/\n?```$/i, '').trim()
+  return JSON.parse(cleaned)
+}
+
 // Exported so it can be unit tested without mocking the Anthropic client.
 // Takes the raw text Claude returned, validates it, and combines implied prep
 // steps with the recipe steps (implied steps come first, re-indexed).
 export function parseRawRecipeJson(rawText: string): CreateRecipeInput {
-  // Strip markdown fences if Claude included them despite instructions
-  const cleaned = rawText.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
 
   let parsed: unknown
   try {
-    parsed = JSON.parse(cleaned)
+    parsed = stripFencesAndParse(rawText)
   } catch {
     throw new Error('Claude returned malformed JSON — cannot parse recipe')
   }
@@ -247,11 +252,10 @@ ${steps.map((s, i) => `${i + 1}. ${s.instruction}`).join('\n')}`,
   })
 
   const rawText = message.content[0].type === 'text' ? message.content[0].text : ''
-  const cleaned = rawText.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
 
   let parsed: unknown
   try {
-    parsed = JSON.parse(cleaned)
+    parsed = stripFencesAndParse(rawText)
   } catch {
     throw new Error('Claude returned malformed JSON for microsteps')
   }
