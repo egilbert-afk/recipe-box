@@ -44,9 +44,10 @@ export async function POST(
   if (!recipe) return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
   if (!recipe.servings) return NextResponse.json({ error: 'Recipe has no base serving count' }, { status: 422 })
 
-  // Microsteps are gated to a single beta user while validating decomposition quality
-  const betaUserId = process.env.MICROSTEPS_BETA_USER_ID
-  if (betaUserId && user.id !== betaUserId) {
+  // Microsteps are gated to allowed beta users while validating decomposition quality.
+  // MICROSTEPS_BETA_USER_IDS is a comma-separated list of Supabase user UUIDs.
+  const betaUserIds = process.env.MICROSTEPS_BETA_USER_IDS
+  if (betaUserIds && !betaUserIds.split(',').map((s) => s.trim()).includes(user.id)) {
     return NextResponse.json({ gated: true })
   }
 
