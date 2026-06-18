@@ -1,10 +1,30 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import type { Ingredient, Step } from '@/lib/types'
 import { formatAmount } from '@/lib/scaler'
 import { formatIngredient } from '@/lib/formatters'
 import { RecipeNotes } from '@/components/RecipeNotes'
+
+// Web Speech API types not yet in all TS DOM versions
+declare global {
+  interface Window {
+    SpeechRecognition?: new () => SpeechRecognitionInstance
+    webkitSpeechRecognition?: new () => SpeechRecognitionInstance
+  }
+}
+interface SpeechRecognitionInstance extends EventTarget {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  start(): void
+  abort(): void
+  onresult: ((e: SpeechRecognitionResultEvent) => void) | null
+  onend: (() => void) | null
+}
+interface SpeechRecognitionResultEvent extends Event {
+  results: { [index: number]: { [index: number]: { transcript: string } } }
+}
 
 type Props = {
   title: string
@@ -25,6 +45,17 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
   const [microsteps, setMicrosteps] = useState<string[] | null>(null)
   const [microstepsLoading, setMicrostepsLoading] = useState(true)
   const [microstepsError, setMicrostepsError] = useState('')
+
+  // Voice state — only available when microsteps are loaded
+  const [voiceEnabled, setVoiceEnabled] = useState(false)
+  const [voiceStatus, setVoiceStatus] = useState<'idle' | 'speaking' | 'listening'>('idle')
+  const voiceEnabledRef = useRef(false)
+  const speakingRef = useRef(false)
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
+  // Refs for values accessed inside recognition event handlers (avoids stale closures)
+  const activeStepsRef = useRef<string[]>([])
+  const clampedStepRef = useRef(0)
+  const totalStepsRef = useRef(0)
 
   useEffect(() => {
     fetch('/api/events', {
@@ -70,12 +101,9 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
       try {
         const lock = await navigator.wakeLock.request('screen')
         if (unmounted) {
-          // Component unmounted while the promise was in flight — release immediately
           lock.release()
           return
         }
-        // Null the ref when the browser auto-releases (e.g. page hidden),
-        // so the cleanup handler doesn't try to release an already-released lock.
         lock.addEventListener('release', () => { wakeLockRef.current = null })
         wakeLockRef.current = lock
       } catch {
@@ -102,6 +130,107 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
   const activeSteps: string[] = microsteps ?? steps.map((s) => s.instruction)
   const totalSteps = activeSteps.length
   const clampedStep = Math.min(currentStep, totalSteps - 1)
+
+  // Keep refs in sync so recognition handlers always see current values
+  useEffect(() => { activeStepsRef.current = activeSteps }, [activeSteps])
+  useEffect(() => { clampedStepRef.current = clampedStep }, [clampedStep])
+  useEffect(() => { totalStepsRef.current = totalSteps }, [totalSteps])
+
+  // Speak a step aloud, then start listening when done
+  const speak = useCallback((text: string) => {
+    if (!('speechSynthesis' in window)) return
+    // Empty text (e.g. blank microstep) — skip TTS but keep listening
+    if (!text) {
+      if (voiceEnabledRef.current) {
+        try { recognitionRef.current?.start(); setVoiceStatus('listening') } catch { setVoiceStatus('idle') }
+      }
+      return
+    }
+    speakingRef.current = true
+    setVoiceStatus('speaking')
+    try { recognitionRef.current?.abort() } catch {}
+    window.speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(text)
+    u.rate = 0.9
+    const afterSpeak = () => {
+      speakingRef.current = false
+      if (!voiceEnabledRef.current) { setVoiceStatus('idle'); return }
+      try { recognitionRef.current?.start(); setVoiceStatus('listening') }
+      catch { setVoiceStatus('idle') }
+    }
+    u.onend = afterSpeak
+    // Chrome/Android sometimes never fires onend — onerror recovers the listening loop
+    u.onerror = afterSpeak
+    window.speechSynthesis.speak(u)
+  }, [])
+
+  // Set up speech recognition once on mount
+  useEffect(() => {
+    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition
+    if (!SR) return
+
+    const r = new SR()
+    r.continuous = false
+    r.interimResults = false
+    r.lang = 'en-US'
+
+    r.onresult = (e: SpeechRecognitionResultEvent) => {
+      const t = e.results[0][0].transcript.toLowerCase()
+      if (t.includes('next')) {
+        setCurrentStep((s) => Math.min(totalStepsRef.current - 1, s + 1))
+      } else if (t.includes('back') || t.includes('previous')) {
+        setCurrentStep((s) => Math.max(0, s - 1))
+      } else if (t.includes('repeat')) {
+        speak(activeStepsRef.current[clampedStepRef.current] ?? '')
+      } else if (t.includes('ingredient')) {
+        setIngredientsOpen(true)
+      }
+    }
+
+    r.onend = () => {
+      // Restart listening if voice is still on and TTS isn't running
+      if (voiceEnabledRef.current && !speakingRef.current) {
+        try { r.start(); setVoiceStatus('listening') } catch { setVoiceStatus('idle') }
+      } else if (!voiceEnabledRef.current) {
+        setVoiceStatus('idle')
+      }
+    }
+
+    recognitionRef.current = r
+
+    return () => {
+      r.abort()
+      recognitionRef.current = null
+    }
+  }, [speak])
+
+  // Speak the current step whenever it changes while voice is on
+  useEffect(() => {
+    if (!voiceEnabled || microstepsLoading || activeSteps.length === 0) return
+    speak(activeSteps[clampedStep] ?? '')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clampedStep, voiceEnabled, microstepsLoading])
+
+  // Cleanup TTS on unmount — recognition cleanup is handled by the recognition setup effect
+  useEffect(() => {
+    return () => { window.speechSynthesis?.cancel() }
+  }, [])
+
+  const toggleVoice = () => {
+    if (voiceEnabled) {
+      // Update ref before cancel/abort so their async callbacks see the correct value
+      voiceEnabledRef.current = false
+      setVoiceEnabled(false)
+      setVoiceStatus('idle')
+      speakingRef.current = false
+      window.speechSynthesis?.cancel()
+      try { recognitionRef.current?.abort() } catch {}
+    } else {
+      voiceEnabledRef.current = true
+      setVoiceEnabled(true)
+      // No speak() here — the step-speak effect fires when voiceEnabled changes to true
+    }
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -173,23 +302,44 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
       </main>
 
       {/* Step navigation */}
-      <div className="flex gap-3 px-4 py-6 border-t border-gray-200">
-        <button
-          type="button"
-          onClick={() => setCurrentStep((s) => Math.max(0, s - 1))}
-          disabled={microstepsLoading || clampedStep === 0}
-          className="flex-1 flex items-center justify-center h-14 rounded-full border border-gray-300 text-base font-medium disabled:opacity-30"
-        >
-          ← Prev
-        </button>
-        <button
-          type="button"
-          onClick={() => setCurrentStep((s) => Math.min(totalSteps - 1, s + 1))}
-          disabled={microstepsLoading || clampedStep === totalSteps - 1}
-          className="flex-1 flex items-center justify-center h-14 rounded-full bg-black text-white text-base font-medium disabled:opacity-30"
-        >
-          Next →
-        </button>
+      <div className="flex flex-col gap-3 px-4 py-6 border-t border-gray-200">
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => setCurrentStep((s) => Math.max(0, s - 1))}
+            disabled={microstepsLoading || clampedStep === 0}
+            className="flex-1 flex items-center justify-center h-14 rounded-full border border-gray-300 text-base font-medium disabled:opacity-30"
+          >
+            ← Prev
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentStep((s) => Math.min(totalSteps - 1, s + 1))}
+            disabled={microstepsLoading || clampedStep === totalSteps - 1}
+            className="flex-1 flex items-center justify-center h-14 rounded-full bg-black text-white text-base font-medium disabled:opacity-30"
+          >
+            Next →
+          </button>
+        </div>
+
+        {/* Voice button — only shown when microsteps are available */}
+        {microsteps && !microstepsLoading && (
+          <button
+            type="button"
+            onClick={toggleVoice}
+            className={`w-full flex items-center justify-center h-12 rounded-full text-sm font-medium transition-colors ${
+              voiceEnabled
+                ? 'bg-gray-900 text-white'
+                : 'border border-gray-300 text-gray-600'
+            }`}
+          >
+            {voiceEnabled
+              ? voiceStatus === 'speaking' ? 'Speaking…'
+              : voiceStatus === 'listening' ? 'Listening…'
+              : 'Voice On'
+              : 'Enable Voice'}
+          </button>
+        )}
       </div>
     </div>
   )
