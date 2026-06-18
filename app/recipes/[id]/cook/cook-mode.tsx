@@ -21,6 +21,11 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
   const [ingredientsOpen, setIngredientsOpen] = useState(false)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
 
+  // Microstep state — fetched from the API on mount, falls back to conventional steps on error
+  const [microsteps, setMicrosteps] = useState<string[] | null>(null)
+  const [microstepsLoading, setMicrostepsLoading] = useState(true)
+  const [microstepsError, setMicrostepsError] = useState('')
+
   useEffect(() => {
     fetch('/api/events', {
       method: 'POST',
@@ -28,6 +33,33 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
       body: JSON.stringify({ event_name: 'cooking_mode_started', properties: { recipe_id: recipeId } }),
     }).catch(() => {})
   }, [recipeId])
+
+  useEffect(() => {
+    let cancelled = false
+    setMicrostepsLoading(true)
+    setMicrostepsError('')
+    fetch(`/api/recipes/${recipeId}/microsteps`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ servings: targetServings }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return
+        if (Array.isArray(data.steps)) {
+          setMicrosteps(data.steps)
+        } else {
+          setMicrostepsError(data.error ?? 'Could not prepare microsteps')
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setMicrostepsError('Could not prepare microsteps')
+      })
+      .finally(() => {
+        if (!cancelled) setMicrostepsLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [recipeId, targetServings])
 
   useEffect(() => {
     if (!('wakeLock' in navigator)) return
@@ -66,7 +98,10 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
     }
   }, [])
 
-  const totalSteps = steps.length
+  // Use microsteps when ready; fall back to conventional steps on error
+  const activeSteps: string[] = microsteps ?? steps.map((s) => s.instruction)
+  const totalSteps = activeSteps.length
+  const clampedStep = Math.min(currentStep, totalSteps - 1)
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -120,12 +155,21 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
 
       {/* Current step */}
       <main className="flex-1 flex flex-col px-4 py-6">
-        <p className="text-sm text-gray-400 mb-4 font-medium tracking-wide uppercase">
-          Step {currentStep + 1} of {totalSteps}
-        </p>
-        <p className="text-xl leading-relaxed text-gray-900">
-          {steps[currentStep]?.instruction}
-        </p>
+        {microstepsLoading ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-gray-400">
+            <p className="text-sm font-medium tracking-wide uppercase">Preparing your recipe…</p>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-gray-400 mb-4 font-medium tracking-wide uppercase">
+              Step {clampedStep + 1} of {totalSteps}
+              {microstepsError && <span className="ml-2 normal-case font-normal">(classic steps)</span>}
+            </p>
+            <p className="text-xl leading-relaxed text-gray-900">
+              {activeSteps[clampedStep]}
+            </p>
+          </>
+        )}
       </main>
 
       {/* Step navigation */}
@@ -133,7 +177,7 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
         <button
           type="button"
           onClick={() => setCurrentStep((s) => Math.max(0, s - 1))}
-          disabled={currentStep === 0}
+          disabled={microstepsLoading || clampedStep === 0}
           className="flex-1 flex items-center justify-center h-14 rounded-full border border-gray-300 text-base font-medium disabled:opacity-30"
         >
           ← Prev
@@ -141,7 +185,7 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
         <button
           type="button"
           onClick={() => setCurrentStep((s) => Math.min(totalSteps - 1, s + 1))}
-          disabled={currentStep === totalSteps - 1}
+          disabled={microstepsLoading || clampedStep === totalSteps - 1}
           className="flex-1 flex items-center justify-center h-14 rounded-full bg-black text-white text-base font-medium disabled:opacity-30"
         >
           Next →

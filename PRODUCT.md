@@ -173,17 +173,19 @@ Beta observation: users follow recipes from the recipe page without entering coo
 
 **Why microsteps:** Conventional recipe steps are often compound — "combine salt, sugar, cumin, and lemon juice in a bowl." For voice guidance these need to be atomic: one action, one instruction. "Add half a teaspoon of salt." "Add one teaspoon of sugar." Each can be read naturally and acted on immediately.
 
-**Key design decision — microsteps are ephemeral:**
+**Key design decision — microsteps are invisible outside cook mode:**
 - The recipe view always shows conventional steps (what users expect from a recipe)
 - Microsteps only exist inside cook mode — generated on demand by Claude when you tap "Start Cooking"
-- Never stored in the database; conventional steps remain the source of truth
+- Conventional steps remain the source of truth; microsteps are a derived view
 - Works on every recipe already in the app with no re-ingestion required
-- Scaled amounts are baked into the microstep text at generation time (no separate scaling math at read time)
+- Scaled amounts are baked into the microstep text at generation time
 
-**On-demand generation:**
-- One Claude call when cook mode starts — sends the conventional steps + target servings, gets back atomic steps with scaled amounts
-- Latency: 5–8 seconds on first cook for a typical recipe; a "Preparing your recipe…" loading state covers this
-- Cache generated microsteps in the database silently on first cook so subsequent sessions are instant
+**Caching — one Claude call per (recipe, serving count):**
+- Cache key is `(recipe_id, servings)` because scaled amounts differ by serving count
+- First cook at a given serving count: Claude call + ~5–8 seconds latency; "Preparing your recipe…" covers the wait
+- Subsequent cooks: instant, served from the `recipe_microsteps` table
+- Cache is invalidated automatically when recipe steps are edited, so it never goes stale
+- Generating at parse time was considered and rejected: serving count isn't known at capture time, and steps may be edited after capture
 
 **Minimum build for self-testing:**
 1. Claude decomposes conventional steps into microsteps with scaled amounts on cook mode entry

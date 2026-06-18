@@ -148,16 +148,21 @@ function isValidParsedRecipe(data: unknown): data is ParsedRecipe {
   return true
 }
 
+// Strips markdown fences Claude occasionally adds despite instructions, then JSON-parses.
+// Using \w+ instead of json so ```javascript and similar variants are also handled.
+function stripFencesAndParse(rawText: string): unknown {
+  const cleaned = rawText.replace(/^```(?:\w+)?\n?/i, '').replace(/\n?```$/i, '').trim()
+  return JSON.parse(cleaned)
+}
+
 // Exported so it can be unit tested without mocking the Anthropic client.
 // Takes the raw text Claude returned, validates it, and combines implied prep
 // steps with the recipe steps (implied steps come first, re-indexed).
 export function parseRawRecipeJson(rawText: string): CreateRecipeInput {
-  // Strip markdown fences if Claude included them despite instructions
-  const cleaned = rawText.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
 
   let parsed: unknown
   try {
-    parsed = JSON.parse(cleaned)
+    parsed = stripFencesAndParse(rawText)
   } catch {
     throw new Error('Claude returned malformed JSON — cannot parse recipe')
   }
@@ -215,6 +220,51 @@ export async function parseRecipeFromText(text: string): Promise<CreateRecipeInp
   })
 
   return extractRecipeFromMessage(message)
+}
+
+export async function generateMicrosteps(
+  steps: Array<{ instruction: string; order_index: number }>,
+  baseServings: number,
+  targetServings: number
+): Promise<string[]> {
+  const scaleFactor = targetServings / baseServings
+
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 4096,
+    messages: [{
+      role: 'user',
+      content: `Break these recipe steps into atomic microsteps for hands-free voice cooking. Each microstep is one physical action that takes 5–30 seconds.
+
+Scale factor: ${scaleFactor} (base servings: ${baseServings}, target: ${targetServings})
+
+Rules:
+- One action per microstep — never combine two actions into one sentence
+- Include the scaled amount in the text when adding an ingredient ("Add 2 tablespoons of butter", not "Add butter")
+- Use natural spoken language — these will be read aloud
+- One sentence per microstep
+- Do not split steps that describe a continuous process (e.g. "stir constantly for 3 minutes" stays as one step)
+- Return ONLY a JSON array of strings with no markdown, no explanation, no code fences
+
+Steps to decompose:
+${steps.map((s, i) => `${i + 1}. ${s.instruction}`).join('\n')}`,
+    }],
+  })
+
+  const rawText = message.content[0].type === 'text' ? message.content[0].text : ''
+
+  let parsed: unknown
+  try {
+    parsed = stripFencesAndParse(rawText)
+  } catch {
+    throw new Error('Claude returned malformed JSON for microsteps')
+  }
+
+  if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every((s) => typeof s === 'string')) {
+    throw new Error('Claude returned invalid microstep format')
+  }
+
+  return parsed as string[]
 }
 
 export async function parseRecipeFromImage(
