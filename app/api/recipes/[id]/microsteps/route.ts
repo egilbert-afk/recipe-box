@@ -62,10 +62,13 @@ export async function POST(
     return NextResponse.json({ steps: cached.steps })
   }
 
-  const [{ data: steps }, { data: ingredients }] = await Promise.all([
+  const [{ data: steps, error: stepsError }, { data: ingredients, error: ingredientsError }] = await Promise.all([
     supabase.from('steps').select('instruction, order_index').eq('recipe_id', id).order('order_index'),
     supabase.from('ingredients').select('name, amount, unit').eq('recipe_id', id).order('order_index'),
   ])
+
+  if (stepsError) return NextResponse.json({ error: 'Failed to load steps' }, { status: 500 })
+  if (ingredientsError) return NextResponse.json({ error: 'Failed to load ingredients' }, { status: 500 })
 
   if (!steps?.length) {
     return NextResponse.json({ error: 'Recipe has no steps' }, { status: 422 })

@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { CuisineId, MealTypeId, CreateRecipeInput } from '@/lib/types'
+import { formatAmount } from '@/lib/scaler'
+import { formatIngredient } from '@/lib/formatters'
 
 const client = new Anthropic()
 
@@ -231,10 +233,9 @@ export async function generateMicrosteps(
   const scaleFactor = targetServings / baseServings
 
   const scaledIngredientList = ingredients.map((ing) => {
-    if (ing.amount === null) return ing.name
-    const scaled = ing.amount * scaleFactor
-    const formatted = Number.isInteger(scaled) ? String(scaled) : parseFloat(scaled.toFixed(3)).toString()
-    return ing.unit ? `${formatted} ${ing.unit} ${ing.name}` : `${formatted} ${ing.name}`
+    if (ing.amount === null) return `${ing.name} (to taste)`
+    const formatted = formatAmount(ing.amount, baseServings, targetServings)
+    return formatIngredient(ing.name, formatted, ing.unit)
   }).join('\n')
 
   const message = await client.messages.create({
@@ -244,6 +245,8 @@ export async function generateMicrosteps(
       role: 'user',
       content: `Break these recipe steps into atomic microsteps for hands-free voice cooking. Each microstep is one physical action that takes 5–30 seconds.
 
+Scale factor: ${scaleFactor} (base servings: ${baseServings}, target: ${targetServings})
+
 Scaled ingredients (at ${targetServings} servings):
 ${scaledIngredientList}
 
@@ -251,6 +254,7 @@ Rules:
 - One action per microstep — never combine two actions into one sentence
 - Always include the scaled amount from the ingredient list when adding an ingredient ("Add 2 tablespoons of butter", not "Add butter")
 - If a step references an ingredient without an amount, look it up in the ingredient list above
+- For ingredients marked "(to taste)", use your judgment — do not invent a quantity
 - Use natural spoken language — these will be read aloud
 - One sentence per microstep
 - Do not split steps that describe a continuous process (e.g. "stir constantly for 3 minutes" stays as one step)
