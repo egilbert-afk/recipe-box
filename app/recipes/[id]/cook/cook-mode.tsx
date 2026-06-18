@@ -48,7 +48,7 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
         if (cancelled) return
         if (Array.isArray(data.steps)) {
           setMicrosteps(data.steps)
-        } else {
+        } else if (!data.gated) {
           setMicrostepsError(data.error ?? 'Could not prepare microsteps')
         }
       })
