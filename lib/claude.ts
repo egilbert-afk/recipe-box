@@ -254,6 +254,7 @@ Rules:
 - One action per microstep — never combine two actions into one sentence
 - Always include the scaled amount from the ingredient list when adding an ingredient ("Add 2 tablespoons of butter", not "Add butter")
 - If a step references an ingredient without an amount, look it up in the ingredient list above
+- When a step references a group of ingredients ("sauce ingredients", "dry ingredients", "marinade", etc.), infer from context which specific ingredients belong to that group and emit one microstep per ingredient with its scaled amount — never pass the group reference through unchanged
 - For ingredients marked "(to taste)", use your judgment — do not invent a quantity
 - Use natural spoken language — these will be read aloud
 - One sentence per microstep
