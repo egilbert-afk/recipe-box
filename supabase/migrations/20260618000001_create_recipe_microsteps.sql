@@ -10,3 +10,16 @@ CREATE TABLE recipe_microsteps (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (recipe_id, servings)
 );
+
+ALTER TABLE recipe_microsteps ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "household members can access their recipe microsteps"
+  ON recipe_microsteps
+  FOR ALL
+  USING (
+    recipe_id IN (
+      SELECT r.id FROM recipes r
+      JOIN household_members hm ON hm.household_id = r.household_id
+      WHERE hm.user_id = auth.uid()
+    )
+  );
