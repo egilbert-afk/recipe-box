@@ -44,6 +44,12 @@ export async function POST(
   if (!recipe) return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
   if (!recipe.servings) return NextResponse.json({ error: 'Recipe has no base serving count' }, { status: 422 })
 
+  // Microsteps are gated to a single beta user while validating decomposition quality
+  const betaUserId = process.env.MICROSTEPS_BETA_USER_ID
+  if (betaUserId && user.id !== betaUserId) {
+    return NextResponse.json({ gated: true })
+  }
+
   // Return cached microsteps if available for this recipe+servings combination
   const { data: cached } = await supabase
     .from('recipe_microsteps')
