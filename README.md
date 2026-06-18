@@ -249,6 +249,7 @@ npm run dev
 | trackEvent() is awaited in API response paths | 10 | Adds a DB round-trip before the response is returned. Convert to fire-and-forget (`trackEvent(...).catch(() => {})`) during the Layer 12 polish pass if response time becomes a concern. |
 | Admin page fetches all events with no limit | 10 | No `.limit()` on the events query in `/admin`. Fine at current scale; add pagination before the dataset grows large. |
 | Admin link not in navigation | 12 | `/admin` is only reachable by typing the URL directly. Add a conditional Admin link to the recipes page header (visible only when `user.email === ADMIN_EMAIL`) when touching that page again. |
+| Voice command "back" doesn't match button label "Prev" | cook | The back-navigation voice command responds to "back" and "previous" but the button says "← Prev". A user who tries "prev" gets no response. Fix: rename the button to "← Back" to match the voice command. |
 | Microstep first-load latency | cook | The `thinking` field in the Claude response format adds tokens and latency. Now that prep ordering is handled mechanically, remove the thinking field — Claude only needs to decompose steps, which is faster. |
 | Dry seasonings split into individual steps | cook | When multiple dry seasonings are applied to the same surface in one motion (salt, pepper, garlic powder, paprika, oregano), Claude splits them into one step per spice. Should be combined into one step: "Season both sides with salt, pepper, garlic powder, paprika, and oregano." |
 
