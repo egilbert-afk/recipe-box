@@ -138,23 +138,29 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
 
   // Speak a step aloud, then start listening when done
   const speak = useCallback((text: string) => {
-    if (!('speechSynthesis' in window) || !text) return
+    if (!('speechSynthesis' in window)) return
+    // Empty text (e.g. blank microstep) — skip TTS but keep listening
+    if (!text) {
+      if (voiceEnabledRef.current) {
+        try { recognitionRef.current?.start(); setVoiceStatus('listening') } catch { setVoiceStatus('idle') }
+      }
+      return
+    }
     speakingRef.current = true
     setVoiceStatus('speaking')
     try { recognitionRef.current?.abort() } catch {}
     window.speechSynthesis.cancel()
     const u = new SpeechSynthesisUtterance(text)
     u.rate = 0.9
-    u.onend = () => {
+    const afterSpeak = () => {
       speakingRef.current = false
       if (!voiceEnabledRef.current) { setVoiceStatus('idle'); return }
-      try {
-        recognitionRef.current?.start()
-        setVoiceStatus('listening')
-      } catch {
-        setVoiceStatus('idle')
-      }
+      try { recognitionRef.current?.start(); setVoiceStatus('listening') }
+      catch { setVoiceStatus('idle') }
     }
+    u.onend = afterSpeak
+    // Chrome/Android sometimes never fires onend — onerror recovers the listening loop
+    u.onerror = afterSpeak
     window.speechSynthesis.speak(u)
   }, [])
 
@@ -205,16 +211,14 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clampedStep, voiceEnabled, microstepsLoading])
 
-  // Cleanup TTS and recognition on unmount
+  // Cleanup TTS on unmount — recognition cleanup is handled by the recognition setup effect
   useEffect(() => {
-    return () => {
-      window.speechSynthesis?.cancel()
-      recognitionRef.current?.abort()
-    }
+    return () => { window.speechSynthesis?.cancel() }
   }, [])
 
   const toggleVoice = () => {
     if (voiceEnabled) {
+      // Update ref before cancel/abort so their async callbacks see the correct value
       voiceEnabledRef.current = false
       setVoiceEnabled(false)
       setVoiceStatus('idle')
@@ -224,7 +228,7 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
     } else {
       voiceEnabledRef.current = true
       setVoiceEnabled(true)
-      speak(activeSteps[clampedStep] ?? '')
+      // No speak() here — the step-speak effect fires when voiceEnabled changes to true
     }
   }
 
