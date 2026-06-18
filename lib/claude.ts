@@ -224,6 +224,83 @@ export async function parseRecipeFromText(text: string): Promise<CreateRecipeInp
   return extractRecipeFromMessage(message)
 }
 
+// Prep modifiers that appear after a comma in ingredient names (longest first to match greedily)
+const PREP_MODIFIERS: Record<string, string> = {
+  'drained and finely diced': 'Drain and finely dice',
+  'drained and diced':        'Drain and dice',
+  'finely diced':             'Finely dice',
+  'finely chopped':           'Finely chop',
+  'roughly chopped':          'Roughly chop',
+  'thinly sliced':            'Thinly slice',
+  'minced':                   'Mince',
+  'diced':                    'Dice',
+  'chopped':                  'Chop',
+  'sliced':                   'Slice',
+  'grated':                   'Grate',
+  'shredded':                 'Shred',
+  'peeled':                   'Peel',
+  'drained':                  'Drain',
+  'crushed':                  'Crush',
+  'zested':                   'Zest',
+  'julienned':                'Julienne',
+}
+
+const HEAT_KEYWORDS = ['heat', 'preheat', 'warm the', 'bring to a boil', 'bring to boil']
+
+// Parses "onion, finely diced" → { baseName: "onion", verb: "Finely dice" }
+function extractPrepModifier(name: string): { baseName: string; verb: string } | null {
+  const commaIdx = name.indexOf(',')
+  if (commaIdx === -1) return null
+  const baseName = name.slice(0, commaIdx).trim()
+  const modifierPart = name.slice(commaIdx + 1).trim().toLowerCase()
+  for (const [modifier, verb] of Object.entries(PREP_MODIFIERS)) {
+    if (modifierPart.includes(modifier)) return { baseName, verb }
+  }
+  return null
+}
+
+// Returns the index of the first step that heats a cooking vessel, or -1
+function findFirstHeatStepIndex(steps: Array<{ instruction: string }>): number {
+  return steps.findIndex((s) =>
+    HEAT_KEYWORDS.some((kw) => s.instruction.toLowerCase().includes(kw))
+  )
+}
+
+// Inserts deterministic prep steps (from ingredient names) before the first heating step
+function insertPrepSteps(
+  steps: Array<{ instruction: string; order_index: number }>,
+  ingredients: Array<{ name: string; amount: number | null; unit: string | null }>
+): Array<{ instruction: string; order_index: number }> {
+  const heatIdx = findFirstHeatStepIndex(steps)
+  if (heatIdx === -1) return steps
+
+  const existingText = steps.map((s) => s.instruction.toLowerCase()).join(' ')
+
+  const prepInstructions: string[] = []
+  for (const ing of ingredients) {
+    const prep = extractPrepModifier(ing.name)
+    if (!prep) continue
+    const lowerBase = prep.baseName.toLowerCase()
+    const lowerVerb = prep.verb.toLowerCase()
+    // Skip if any existing step already covers this prep
+    if (existingText.includes(lowerVerb) && existingText.includes(lowerBase)) continue
+    prepInstructions.push(`${prep.verb} the ${prep.baseName}.`)
+  }
+
+  if (prepInstructions.length === 0) return steps
+
+  const prepSteps = prepInstructions.map((instruction, i) => ({
+    instruction,
+    order_index: -(prepInstructions.length - i),
+  }))
+
+  return [
+    ...steps.slice(0, heatIdx),
+    ...prepSteps,
+    ...steps.slice(heatIdx),
+  ]
+}
+
 export async function generateMicrosteps(
   steps: Array<{ instruction: string; order_index: number }>,
   ingredients: Array<{ name: string; amount: number | null; unit: string | null }>,
@@ -231,6 +308,8 @@ export async function generateMicrosteps(
   targetServings: number
 ): Promise<string[]> {
   const scaleFactor = targetServings / baseServings
+
+  const augmentedSteps = insertPrepSteps(steps, ingredients)
 
   const scaledIngredientList = ingredients.map((ing) => {
     if (ing.amount === null) return `${ing.name} (to taste)`
@@ -243,27 +322,26 @@ export async function generateMicrosteps(
     max_tokens: 4096,
     messages: [{
       role: 'user',
-      content: `Break these recipe steps into atomic microsteps for hands-free voice cooking. Each microstep is one physical action that takes 5–30 seconds.
+      content: `You are breaking recipe steps into atomic microsteps for hands-free voice cooking.
 
 Scale factor: ${scaleFactor} (base servings: ${baseServings}, target: ${targetServings})
 
 Scaled ingredients (at ${targetServings} servings):
 ${scaledIngredientList}
 
-Rules:
-- One action per microstep — never combine two actions into one sentence
-- Always include the scaled amount from the ingredient list when adding an ingredient ("Add 2 tablespoons of butter", not "Add butter")
-- If a step references an ingredient without an amount, look it up in the ingredient list above
-- When a step references a group of ingredients ("sauce ingredients", "dry ingredients", "marinade", etc.), infer from context which specific ingredients belong to that group and emit one microstep per ingredient with its scaled amount — never pass the group reference through unchanged
-- For ingredients marked "(to taste)", use your judgment — do not invent a quantity
-- Before decomposing, scan all steps to identify ingredients with preparation modifiers (diced, minced, chopped, sliced, grated, drained, peeled, etc.) that are not already covered by an explicit step. Insert the prep microstep immediately before the first heat or cooking action that depends on it — not at the very start of the recipe, and not after the pan is already hot
-- Use natural spoken language — these will be read aloud
-- One sentence per microstep
-- Do not split steps that describe a continuous process (e.g. "stir constantly for 3 minutes" stays as one step)
-- Return ONLY a JSON array of strings with no markdown, no explanation, no code fences
+Recipe steps:
+${augmentedSteps.map((s, i) => `${i + 1}. ${s.instruction}`).join('\n')}
 
-Steps to decompose:
-${steps.map((s, i) => `${i + 1}. ${s.instruction}`).join('\n')}`,
+Output the full ordered microstep sequence in the "steps" field. Each microstep is one physical action (5–30 seconds). Rules:
+- One action per microstep — never combine two actions
+- Always include the scaled amount when adding an ingredient
+- For ingredients marked "(to taste)", do not invent a quantity
+- When a step references a group ("sauce ingredients", "dry ingredients"), expand to individual ingredients with amounts
+- Use natural spoken language — these will be read aloud
+- Do not split continuous processes ("stir constantly for 3 minutes" stays as one step)
+
+Return ONLY valid JSON in this exact shape, with no markdown or code fences:
+{"thinking": "your reasoning here", "steps": ["microstep 1", "microstep 2", ...]}`,
     }],
   })
 
@@ -276,11 +354,16 @@ ${steps.map((s, i) => `${i + 1}. ${s.instruction}`).join('\n')}`,
     throw new Error('Claude returned malformed JSON for microsteps')
   }
 
-  if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every((s) => typeof s === 'string')) {
+  // Extract steps from {thinking, steps} shape
+  const steps_out = parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
+    ? (parsed as Record<string, unknown>).steps
+    : parsed
+
+  if (!Array.isArray(steps_out) || steps_out.length === 0 || !steps_out.every((s) => typeof s === 'string')) {
     throw new Error('Claude returned invalid microstep format')
   }
 
-  return parsed as string[]
+  return steps_out as string[]
 }
 
 export async function parseRecipeFromImage(
