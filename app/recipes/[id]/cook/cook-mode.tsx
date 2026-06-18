@@ -83,6 +83,7 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
       {/* Ingredients — collapsed by default */}
       <div className="border-b border-gray-200">
         <button
+          type="button"
           onClick={() => setIngredientsOpen((o) => !o)}
           aria-expanded={ingredientsOpen}
           className="flex items-center justify-between w-full px-4 py-4 text-base font-semibold text-left"
@@ -130,6 +131,7 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
       {/* Step navigation */}
       <div className="flex gap-3 px-4 py-6 border-t border-gray-200">
         <button
+          type="button"
           onClick={() => setCurrentStep((s) => Math.max(0, s - 1))}
           disabled={currentStep === 0}
           className="flex-1 flex items-center justify-center h-14 rounded-full border border-gray-300 text-base font-medium disabled:opacity-30"
@@ -137,6 +139,7 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
           ← Prev
         </button>
         <button
+          type="button"
           onClick={() => setCurrentStep((s) => Math.min(totalSteps - 1, s + 1))}
           disabled={currentStep === totalSteps - 1}
           className="flex-1 flex items-center justify-center h-14 rounded-full bg-black text-white text-base font-medium disabled:opacity-30"

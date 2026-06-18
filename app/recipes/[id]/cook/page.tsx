@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { CookMode } from './cook-mode'
+import type { Ingredient, Step } from '@/lib/types'
 
 export default async function CookPage({
   params,
@@ -24,8 +25,8 @@ export default async function CookPage({
   }
 
   const [{ data: ingredients }, { data: steps }] = await Promise.all([
-    supabase.from('ingredients').select('*').eq('recipe_id', id).order('order_index'),
-    supabase.from('steps').select('*').eq('recipe_id', id).order('order_index'),
+    supabase.from('ingredients').select('id, name, amount, unit, order_index').eq('recipe_id', id).order('order_index'),
+    supabase.from('steps').select('id, instruction, order_index').eq('recipe_id', id).order('order_index'),
   ])
 
   const parsed = parseInt(servingsParam ?? '', 10)
@@ -40,8 +41,8 @@ export default async function CookPage({
       baseServings={recipe.servings}
       targetServings={targetServings}
       notes={recipe.notes ?? null}
-      ingredients={ingredients ?? []}
-      steps={steps ?? []}
+      ingredients={(ingredients ?? []) as Ingredient[]}
+      steps={(steps ?? []) as Step[]}
     />
   )
 }
