@@ -256,6 +256,7 @@ Rules:
 - If a step references an ingredient without an amount, look it up in the ingredient list above
 - When a step references a group of ingredients ("sauce ingredients", "dry ingredients", "marinade", etc.), infer from context which specific ingredients belong to that group and emit one microstep per ingredient with its scaled amount — never pass the group reference through unchanged
 - For ingredients marked "(to taste)", use your judgment — do not invent a quantity
+- Before decomposing, scan all steps to identify ingredients with preparation modifiers (diced, minced, chopped, sliced, grated, drained, peeled, etc.) that are not already covered by an explicit step. Insert the prep microstep immediately before the first heat or cooking action that depends on it — not at the very start of the recipe, and not after the pan is already hot
 - Use natural spoken language — these will be read aloud
 - One sentence per microstep
 - Do not split steps that describe a continuous process (e.g. "stir constantly for 3 minutes" stays as one step)
