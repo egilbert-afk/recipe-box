@@ -62,11 +62,10 @@ export async function POST(
     return NextResponse.json({ steps: cached.steps })
   }
 
-  const { data: steps } = await supabase
-    .from('steps')
-    .select('instruction, order_index')
-    .eq('recipe_id', id)
-    .order('order_index')
+  const [{ data: steps }, { data: ingredients }] = await Promise.all([
+    supabase.from('steps').select('instruction, order_index').eq('recipe_id', id).order('order_index'),
+    supabase.from('ingredients').select('name, amount, unit').eq('recipe_id', id).order('order_index'),
+  ])
 
   if (!steps?.length) {
     return NextResponse.json({ error: 'Recipe has no steps' }, { status: 422 })
@@ -74,7 +73,7 @@ export async function POST(
 
   let microsteps: string[]
   try {
-    microsteps = await generateMicrosteps(steps, recipe.servings, servings)
+    microsteps = await generateMicrosteps(steps, ingredients ?? [], recipe.servings, servings)
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Failed to generate microsteps' },
