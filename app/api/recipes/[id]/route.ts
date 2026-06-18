@@ -168,9 +168,12 @@ export async function PATCH(
     return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
   }
 
-  // Replace ingredients and steps
-  await supabase.from('ingredients').delete().eq('recipe_id', id)
-  await supabase.from('steps').delete().eq('recipe_id', id)
+  // Replace ingredients and steps; clear microstep cache since steps changed
+  await Promise.all([
+    supabase.from('ingredients').delete().eq('recipe_id', id),
+    supabase.from('steps').delete().eq('recipe_id', id),
+    supabase.from('recipe_microsteps').delete().eq('recipe_id', id),
+  ])
 
   if (edit.ingredients?.length) {
     const { error: ingredientsError } = await supabase.from('ingredients').insert(
