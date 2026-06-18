@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { CuisineId, MealTypeId, CreateRecipeInput } from '@/lib/types'
+import { formatAmount } from '@/lib/scaler'
+import { formatIngredient } from '@/lib/formatters'
 
 const client = new Anthropic()
 
@@ -224,10 +226,17 @@ export async function parseRecipeFromText(text: string): Promise<CreateRecipeInp
 
 export async function generateMicrosteps(
   steps: Array<{ instruction: string; order_index: number }>,
+  ingredients: Array<{ name: string; amount: number | null; unit: string | null }>,
   baseServings: number,
   targetServings: number
 ): Promise<string[]> {
   const scaleFactor = targetServings / baseServings
+
+  const scaledIngredientList = ingredients.map((ing) => {
+    if (ing.amount === null) return `${ing.name} (to taste)`
+    const formatted = formatAmount(ing.amount, baseServings, targetServings)
+    return formatIngredient(ing.name, formatted, ing.unit)
+  }).join('\n')
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
@@ -238,9 +247,14 @@ export async function generateMicrosteps(
 
 Scale factor: ${scaleFactor} (base servings: ${baseServings}, target: ${targetServings})
 
+Scaled ingredients (at ${targetServings} servings):
+${scaledIngredientList}
+
 Rules:
 - One action per microstep — never combine two actions into one sentence
-- Include the scaled amount in the text when adding an ingredient ("Add 2 tablespoons of butter", not "Add butter")
+- Always include the scaled amount from the ingredient list when adding an ingredient ("Add 2 tablespoons of butter", not "Add butter")
+- If a step references an ingredient without an amount, look it up in the ingredient list above
+- For ingredients marked "(to taste)", use your judgment — do not invent a quantity
 - Use natural spoken language — these will be read aloud
 - One sentence per microstep
 - Do not split steps that describe a continuous process (e.g. "stir constantly for 3 minutes" stays as one step)
