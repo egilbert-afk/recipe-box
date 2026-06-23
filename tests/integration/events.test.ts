@@ -34,12 +34,17 @@ function authAs(userId: string) {
   } as never)
 }
 
-function makeChain(result = { error: null }) {
+// Chain for household_members lookup: .select().eq().limit().maybeSingle()
+function makeMembershipChain(result = { data: { household_id: 'hh-1' }, error: null } as { data: { household_id: string } | null; error: { message: string } | null }) {
   const chain: Record<string, unknown> = {}
-  const methods = ['insert', 'select', 'eq', 'single']
-  for (const m of methods) chain[m] = vi.fn().mockReturnValue(chain)
-  ;(chain.insert as ReturnType<typeof vi.fn>).mockResolvedValue(result)
+  for (const m of ['select', 'eq', 'limit']) chain[m] = vi.fn().mockReturnValue(chain)
+  chain.maybeSingle = vi.fn().mockResolvedValue(result)
   return chain
+}
+
+// Chain for events insert: .insert()
+function makeInsertChain(result = { error: null } as { error: { message: string } | null }) {
+  return { insert: vi.fn().mockResolvedValue(result) }
 }
 
 function makeRequest(body: object) {
@@ -50,10 +55,17 @@ function makeRequest(body: object) {
   })
 }
 
+let membershipChain: ReturnType<typeof makeMembershipChain>
+let insertChain: ReturnType<typeof makeInsertChain>
+
 beforeEach(() => {
   vi.clearAllMocks()
   authAs('user-1')
-  mockFrom.mockReturnValue(makeChain() as never)
+  membershipChain = makeMembershipChain()
+  insertChain = makeInsertChain()
+  mockFrom.mockImplementation((table: string) =>
+    (table === 'household_members' ? membershipChain : insertChain) as never
+  )
 })
 
 describe('POST /api/events', () => {
@@ -83,37 +95,80 @@ describe('POST /api/events', () => {
     expect(res.status).toBe(201)
   })
 
-  it('inserts the correct fields', async () => {
-    const chain = makeChain()
-    mockFrom.mockReturnValue(chain as never)
+  it('looks up household_id server-side and uses it in the insert', async () => {
+    membershipChain = makeMembershipChain({ data: { household_id: 'hh-abc' }, error: null })
+    mockFrom.mockImplementation((table: string) =>
+      (table === 'household_members' ? membershipChain : insertChain) as never
+    )
 
-    await POST(makeRequest({
-      event_name: 'recipe_added',
-      household_id: 'hh-1',
-      properties: { capture_method: 'manual' },
-    }))
+    await POST(makeRequest({ event_name: 'cooking_mode_started', properties: { recipe_id: 'r-1' } }))
 
-    expect(chain.insert).toHaveBeenCalledWith({
+    expect(insertChain.insert).toHaveBeenCalledWith({
       user_id: 'user-1',
-      household_id: 'hh-1',
-      event_name: 'recipe_added',
-      properties: { capture_method: 'manual' },
+      household_id: 'hh-abc',
+      event_name: 'cooking_mode_started',
+      properties: { recipe_id: 'r-1' },
     })
   })
 
-  it('defaults household_id to null when not provided', async () => {
-    const chain = makeChain()
-    mockFrom.mockReturnValue(chain as never)
+  it('ignores any household_id supplied in the request body', async () => {
+    membershipChain = makeMembershipChain({ data: { household_id: 'server-hh' }, error: null })
+    mockFrom.mockImplementation((table: string) =>
+      (table === 'household_members' ? membershipChain : insertChain) as never
+    )
+
+    await POST(makeRequest({ event_name: 'recipe_added', household_id: 'spoofed-hh' } as object))
+
+    expect(insertChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ household_id: 'server-hh' })
+    )
+  })
+
+  it('inserts null household_id when the membership lookup finds no row', async () => {
+    membershipChain = makeMembershipChain({ data: null, error: null })
+    mockFrom.mockImplementation((table: string) =>
+      (table === 'household_members' ? membershipChain : insertChain) as never
+    )
 
     await POST(makeRequest({ event_name: 'account_created' }))
 
-    expect(chain.insert).toHaveBeenCalledWith(
+    expect(insertChain.insert).toHaveBeenCalledWith(
       expect.objectContaining({ household_id: null })
     )
   })
 
+  it('still inserts the event with null household_id when the membership lookup errors', async () => {
+    membershipChain = makeMembershipChain({ data: null, error: { message: 'DB error' } })
+    mockFrom.mockImplementation((table: string) =>
+      (table === 'household_members' ? membershipChain : insertChain) as never
+    )
+
+    const res = await POST(makeRequest({ event_name: 'cooking_mode_started' }))
+
+    expect(res.status).toBe(201)
+    expect(insertChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ household_id: null })
+    )
+  })
+
+  it('logs an error when the membership lookup fails', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    membershipChain = makeMembershipChain({ data: null, error: { message: 'lookup failed' } })
+    mockFrom.mockImplementation((table: string) =>
+      (table === 'household_members' ? membershipChain : insertChain) as never
+    )
+
+    await POST(makeRequest({ event_name: 'cooking_mode_started' }))
+
+    expect(consoleSpy).toHaveBeenCalledWith('[api/events] household lookup failed:', 'lookup failed')
+    consoleSpy.mockRestore()
+  })
+
   it('returns 500 when the insert fails', async () => {
-    mockFrom.mockReturnValue(makeChain({ error: { message: 'DB error' } }) as never)
+    insertChain = makeInsertChain({ error: { message: 'DB error' } })
+    mockFrom.mockImplementation((table: string) =>
+      (table === 'household_members' ? membershipChain : insertChain) as never
+    )
 
     const res = await POST(makeRequest({ event_name: 'recipe_added' }))
     expect(res.status).toBe(500)

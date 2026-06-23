@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { event_name?: string; household_id?: string; properties?: Record<string, unknown> }
+  let body: { event_name?: string; properties?: Record<string, unknown> }
   try {
     body = await request.json()
   } catch {
@@ -21,9 +21,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid event name' }, { status: 400 })
   }
 
+  // Look up household server-side rather than trusting the client to send it.
+  // .limit(1) prevents maybeSingle() from erroring when a user appears in multiple
+  // household_members rows (possible in dev/testing; maybeSingle errors on >1 row).
+  const { data: membership, error: membershipError } = await supabase
+    .from('household_members')
+    .select('household_id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle()
+
+  if (membershipError) {
+    console.error('[api/events] household lookup failed:', membershipError.message)
+  }
+
   const { error } = await supabase.from('events').insert({
     user_id: user.id,
-    household_id: body.household_id ?? null,
+    household_id: membership?.household_id ?? null,
     event_name: body.event_name,
     properties: body.properties ?? {},
   })
