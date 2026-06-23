@@ -235,6 +235,8 @@ trackEvent(userId, householdId, 'event_name', props).catch(err =>
 await trackEvent(userId, householdId, 'event_name', props)
 ```
 
+Existing `await trackEvent(...)` calls throughout the codebase are a Known Issue — convert them during the next polish pass. This rule applies to all new code written from here forward.
+
 ### Rate limiting
 
 Any endpoint that creates or joins shared resources — household creation, invite code join, share link actions — must have rate limiting before real users arrive. This is a pre-launch requirement, not a post-launch cleanup. Add it from the start on new endpoints of this type, not as a Known Issue to revisit later.
@@ -258,7 +260,7 @@ Build strictly in this order. Do not begin a new layer until the current layer h
 | 9 | ✅ | Household model — households, members, invite codes, cook sessions, onboarding |
 | 10 | ✅ | Usage analytics — events table, POST /api/events, instrumentation |
 | 11 | ✅ | In-app feedback button |
-| 12 | ✅ | UI polish — bottom nav, filter chips, recipe editing, personal notes, icon polish, settings page, recipe sharing, shared auth helper |
+| 12 | ✅ | UI polish — bottom nav, filter chips, recipe editing, personal notes, icon polish, settings page, recipe sharing |
 | 13 | ✅ | Implied prep steps — Claude surfaces mincing/chopping from ingredient lists |
 | 14 | — | Cook history and ratings UI |
 | 15 | — | Meal planning and shopping list |
