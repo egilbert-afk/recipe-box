@@ -310,7 +310,7 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
             disabled={microstepsLoading || clampedStep === 0}
             className="flex-1 flex items-center justify-center h-14 rounded-full border border-gray-300 text-base font-medium disabled:opacity-30"
           >
-            ← Prev
+            ← Back
           </button>
           <button
             type="button"
