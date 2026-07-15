@@ -243,9 +243,34 @@ Any endpoint that creates or joins shared resources — household creation, invi
 
 ---
 
-## Layer build plan
+## Current focus — quality before features
 
-Build strictly in this order. Do not begin a new layer until the current layer has passing tests and a merged PR.
+Layers 1–13 are complete. Rather than continuing to add layers, the current priority is making the existing app more useful, intuitive, and polished before building new capabilities.
+
+Work in this order:
+
+**1. Polish the two best features (microsteps + voice)**
+- Fix voice command/button label mismatch: command is "back" but button says "Prev" — rename button to "Back"
+- Reduce microstep first-load latency: remove the `thinking` field from the Claude microsteps prompt
+- Fix dry seasonings splitting into one step per spice — they should be combined into one step
+
+**2. Make those features discoverable**
+- Surface voice and microsteps earlier/more prominently in the cooking flow so new users find them without stumbling
+
+**3. Capture robustness**
+- Add a domain blocklist for known-blocked sites (Dotdash Meredith family: Simply Recipes, Serious Eats, Allrecipes, The Spruce Eats) — show an immediate fallback prompt instead of waiting for a 403
+
+**Future layers (deferred — revisit after quality pass)**
+
+| Layer | What gets built |
+|-------|----------------|
+| 14 | Cook history and ratings UI |
+| 15 | Meal planning and shopping list |
+| 16 | Stripe + subscription + free tier enforcement |
+| 17 | Social login — Apple and Google |
+| 18 | Seasonal suggestions and personal cook time estimates |
+
+**Completed layers**
 
 | Layer | Status | What gets built |
 |-------|--------|----------------|
@@ -262,11 +287,6 @@ Build strictly in this order. Do not begin a new layer until the current layer h
 | 11 | ✅ | In-app feedback button |
 | 12 | ✅ | UI polish — bottom nav, filter chips, recipe editing, personal notes, icon polish, settings page, recipe sharing |
 | 13 | ✅ | Implied prep steps — Claude surfaces mincing/chopping from ingredient lists |
-| 14 | — | Cook history and ratings UI |
-| 15 | — | Meal planning and shopping list |
-| 16 | — | Stripe + subscription + free tier enforcement |
-| 17 | — | Social login — Apple and Google |
-| 18 | — | Seasonal suggestions and personal cook time estimates |
 
 ---
 
