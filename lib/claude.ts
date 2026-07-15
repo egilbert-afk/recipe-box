@@ -339,6 +339,7 @@ Output the full ordered microstep sequence in the "steps" field. Each microstep 
 - When a step references a group ("sauce ingredients", "dry ingredients"), expand to individual ingredients with amounts
 - Use natural spoken language — these will be read aloud
 - Do not split continuous processes ("stir constantly for 3 minutes" stays as one step)
+- When applying multiple ingredients to the same surface, complete all applications to that surface before flipping or turning — never alternate back and forth between surfaces
 
 Return ONLY valid JSON in this exact shape, with no markdown or code fences:
 {"steps": ["microstep 1", "microstep 2", ...]}`,
