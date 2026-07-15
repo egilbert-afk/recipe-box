@@ -341,7 +341,7 @@ Output the full ordered microstep sequence in the "steps" field. Each microstep 
 - Do not split continuous processes ("stir constantly for 3 minutes" stays as one step)
 
 Return ONLY valid JSON in this exact shape, with no markdown or code fences:
-{"thinking": "your reasoning here", "steps": ["microstep 1", "microstep 2", ...]}`,
+{"steps": ["microstep 1", "microstep 2", ...]}`,
     }],
   })
 
@@ -354,10 +354,9 @@ Return ONLY valid JSON in this exact shape, with no markdown or code fences:
     throw new Error('Claude returned malformed JSON for microsteps')
   }
 
-  // Extract steps from {thinking, steps} shape
   const steps_out = parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
     ? (parsed as Record<string, unknown>).steps
-    : parsed
+    : null
 
   if (!Array.isArray(steps_out) || steps_out.length === 0 || !steps_out.every((s) => typeof s === 'string')) {
     throw new Error('Claude returned invalid microstep format')
