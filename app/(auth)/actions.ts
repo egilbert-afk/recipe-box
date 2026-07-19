@@ -79,6 +79,50 @@ export async function signUp(formData: FormData) {
   redirect('/onboarding')
 }
 
+export async function forgotPassword(formData: FormData) {
+  const email = (formData.get('email') as string) ?? ''
+  if (!email) {
+    redirect('/forgot-password?error=Email+is+required')
+  }
+
+  const headersList = await headers()
+  const host = headersList.get('host') ?? 'localhost:3000'
+  const protocol = host.includes('localhost') ? 'http' : 'https'
+  const redirectTo = `${protocol}://${host}/auth/callback?type=recovery`
+
+  const supabase = await createSupabaseServerClient()
+  await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+
+  // Always show the same message regardless of whether the email exists —
+  // avoids leaking which emails are registered.
+  redirect('/forgot-password?message=If+that+email+is+registered%2C+you%27ll+get+a+reset+link+shortly.+Check+your+inbox+and+spam+folder.')
+}
+
+export async function resetPassword(formData: FormData) {
+  const password = (formData.get('password') as string) ?? ''
+  const confirmPassword = (formData.get('confirm_password') as string) ?? ''
+
+  if (password.length < 6) {
+    redirect('/reset-password?error=Password+must+be+at+least+6+characters')
+  }
+
+  if (password !== confirmPassword) {
+    redirect('/reset-password?error=Passwords+do+not+match')
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const { error } = await supabase.auth.updateUser({ password })
+
+  if (error) {
+    const message = error.message.toLowerCase().includes('different')
+      ? 'Your+new+password+must+be+different+from+your+current+one.'
+      : 'Failed+to+update+password.+Your+reset+link+may+have+expired.+Request+a+new+one.'
+    redirect(`/reset-password?error=${message}`)
+  }
+
+  redirect('/recipes')
+}
+
 export async function signOut() {
   const supabase = await createSupabaseServerClient()
   await supabase.auth.signOut()
