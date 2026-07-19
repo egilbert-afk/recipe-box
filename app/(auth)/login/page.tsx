@@ -55,11 +55,16 @@ export default async function LoginPage({
           </button>
         </form>
 
-        <div className="text-center">
+        <div className="text-center space-y-2">
           <p className="text-sm text-gray-500">
             New to Recipe Box?{' '}
             <a href={code ? `/signup?code=${code}` : save ? `/signup?save=${save}` : '/signup'} className="text-gray-900 underline">
               Sign up
+            </a>
+          </p>
+          <p className="text-sm text-gray-500">
+            <a href="/forgot-password" className="text-gray-900 underline">
+              Forgot your password?
             </a>
           </p>
         </div>

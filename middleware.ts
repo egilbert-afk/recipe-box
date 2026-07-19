@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  if (!user && !pathname.startsWith('/login') && !pathname.startsWith('/signup') && !pathname.startsWith('/auth') && !pathname.startsWith('/join') && !pathname.startsWith('/r/')) {
+  if (!user && !pathname.startsWith('/login') && !pathname.startsWith('/signup') && !pathname.startsWith('/forgot-password') && !pathname.startsWith('/reset-password') && !pathname.startsWith('/auth') && !pathname.startsWith('/join') && !pathname.startsWith('/r/')) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
   // Uses service role client because the Edge runtime does not reliably forward
   // the user JWT for non-auth DB queries, causing RLS to return nothing.
   // user.id is already validated above via getUser(), so this is safe.
-  if (user && !pathname.startsWith('/onboarding') && !pathname.startsWith('/auth') && !pathname.startsWith('/api') && !pathname.startsWith('/join')) {
+  if (user && !pathname.startsWith('/onboarding') && !pathname.startsWith('/reset-password') && !pathname.startsWith('/auth') && !pathname.startsWith('/api') && !pathname.startsWith('/join')) {
     const serviceClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!

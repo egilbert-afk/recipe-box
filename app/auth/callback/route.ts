@@ -15,11 +15,13 @@ export async function GET(request: NextRequest) {
   const saveToken = sanitizeShareToken(searchParams.get('save_token'))
 
   if (code) {
-    const destination = inviteCode
-      ? `${origin}/onboarding?code=${inviteCode}`
-      : saveToken
-        ? `${origin}/onboarding?save=${saveToken}`
-        : `${origin}/recipes`
+    const destination = type === 'recovery'
+      ? `${origin}/reset-password`
+      : inviteCode
+        ? `${origin}/onboarding?code=${inviteCode}`
+        : saveToken
+          ? `${origin}/onboarding?save=${saveToken}`
+          : `${origin}/recipes`
     const response = NextResponse.redirect(destination)
 
     const supabase = createServerClient(
