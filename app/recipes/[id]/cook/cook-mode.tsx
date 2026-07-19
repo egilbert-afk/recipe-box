@@ -286,7 +286,7 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
       <main className="flex-1 flex flex-col px-4 py-6">
         {microstepsLoading ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-gray-400">
-            <p className="text-sm font-medium tracking-wide uppercase">Preparing your recipe…</p>
+            <p className="text-sm font-medium tracking-wide uppercase">Preparing your recipe, one action at a time…</p>
           </div>
         ) : (
           <>
