@@ -11,7 +11,7 @@ export function ServingsPicker({ recipeId, baseServings }: Props) {
   const [servings, setServings] = useState(baseServings)
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="space-y-3">
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -33,12 +33,20 @@ export function ServingsPicker({ recipeId, baseServings }: Props) {
           +
         </button>
       </div>
-      <Link
-        href={`/recipes/${recipeId}/cook?servings=${servings}`}
-        className="flex items-center justify-center h-12 px-5 rounded-full bg-black text-white text-sm font-medium"
-      >
-        Start Cooking
-      </Link>
+      <div className="flex gap-2">
+        <Link
+          href={`/recipes/${recipeId}/cook?servings=${servings}&voice=true`}
+          className="flex-1 flex items-center justify-center h-12 rounded-full bg-black text-white text-sm font-medium"
+        >
+          Read it to me
+        </Link>
+        <Link
+          href={`/recipes/${recipeId}/cook?servings=${servings}`}
+          className="flex-1 flex items-center justify-center h-12 rounded-full bg-black text-white text-sm font-medium"
+        >
+          I'll read it
+        </Link>
+      </div>
     </div>
   )
 }

@@ -34,9 +34,10 @@ type Props = {
   notes: string | null
   ingredients: Ingredient[]
   steps: Step[]
+  autoVoice?: boolean
 }
 
-export function CookMode({ title, recipeId, baseServings, targetServings, notes, ingredients, steps }: Props) {
+export function CookMode({ title, recipeId, baseServings, targetServings, notes, ingredients, steps, autoVoice }: Props) {
   const [currentStep, setCurrentStep] = useState(0)
   const [ingredientsOpen, setIngredientsOpen] = useState(false)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
@@ -135,6 +136,15 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
   useEffect(() => { activeStepsRef.current = activeSteps }, [activeSteps])
   useEffect(() => { clampedStepRef.current = clampedStep }, [clampedStep])
   useEffect(() => { totalStepsRef.current = totalSteps }, [totalSteps])
+
+  // Auto-enable voice when entering via "Read it to me" — fires once microsteps are ready
+  const autoVoiceStartedRef = useRef(false)
+  useEffect(() => {
+    if (!autoVoice || autoVoiceStartedRef.current || microstepsLoading || !microsteps) return
+    autoVoiceStartedRef.current = true
+    voiceEnabledRef.current = true
+    setVoiceEnabled(true)
+  }, [autoVoice, microstepsLoading, microsteps])
 
   // Speak a step aloud, then start listening when done
   const speak = useCallback((text: string) => {
