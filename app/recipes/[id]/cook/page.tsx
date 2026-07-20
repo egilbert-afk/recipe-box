@@ -8,10 +8,10 @@ export default async function CookPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ servings?: string }>
+  searchParams: Promise<{ servings?: string; voice?: string }>
 }) {
   const { id } = await params
-  const { servings: servingsParam } = await searchParams
+  const { servings: servingsParam, voice: voiceParam } = await searchParams
   const supabase = await createSupabaseServerClient()
 
   const { data: recipe, error: recipeError } = await supabase
@@ -43,6 +43,7 @@ export default async function CookPage({
       notes={recipe.notes ?? null}
       ingredients={(ingredients ?? []) as Ingredient[]}
       steps={(steps ?? []) as Step[]}
+      autoVoice={voiceParam === 'true'}
     />
   )
 }
