@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
     const recipe = await parseRecipeFromUrl(url)
     return NextResponse.json(recipe)
   } catch (err) {
-    return NextResponse.json({ error: friendlyClaudeError(err) }, { status: 422 })
+    const msg = err instanceof Error ? err.message : ''
+    const autoSwitch = msg.includes('blocked') || msg.includes('subscription')
+    return NextResponse.json({ error: friendlyClaudeError(err), autoSwitch }, { status: 422 })
   }
 }
