@@ -86,6 +86,7 @@ function AddRecipePageContent() {
   const [textInput, setTextInput] = useState('')
   const [uploadError, setUploadError] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [switchNote, setSwitchNote] = useState('')
 
   const [title, setTitle] = useState('')
   const [cuisineId, setCuisineId] = useState<CuisineId | ''>('')
@@ -105,6 +106,7 @@ function AddRecipePageContent() {
     setFormVisible(false)
     setFetchError('')
     setUploadError('')
+    setSwitchNote('')
   }
 
   function prefillForm(data: CreateRecipeInput) {
@@ -143,7 +145,12 @@ function AddRecipePageContent() {
       const data = await res.json()
 
       if (!res.ok) {
-        setFetchError(data.error ?? 'Could not read recipe. Try pasting the text instead.')
+        if (data.autoSwitch) {
+          switchMode('text')
+          setSwitchNote('This site doesn\'t allow importing. Copy the recipe text from your browser and paste it here.')
+        } else {
+          setFetchError(data.error ?? 'Could not read recipe. Try pasting the text instead.')
+        }
         return
       }
 
@@ -457,6 +464,11 @@ function AddRecipePageContent() {
         {/* Text capture */}
         {mode === 'text' && (
           <div className="space-y-3">
+            {switchNote && (
+              <p className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+                {switchNote}
+              </p>
+            )}
             <textarea
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
