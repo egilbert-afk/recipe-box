@@ -50,8 +50,10 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
   // Voice state — only available when microsteps are loaded
   const [voiceEnabled, setVoiceEnabled] = useState(false)
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'speaking' | 'listening'>('idle')
+  const [showTapPrompt, setShowTapPrompt] = useState(false)
   const voiceEnabledRef = useRef(false)
   const speakingRef = useRef(false)
+  const audioStartedRef = useRef(false)
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
   // Refs for values accessed inside recognition event handlers (avoids stale closures)
   const activeStepsRef = useRef<string[]>([])
@@ -146,6 +148,17 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
     setVoiceEnabled(true)
   }, [autoVoice, microstepsLoading, microsteps])
 
+  // On mobile browsers, speechSynthesis.speak() requires a direct user gesture.
+  // When auto-enabled, the gesture (tap on "Read it to me") has expired by the time
+  // microsteps load. Show a tap prompt so the user can provide a fresh gesture.
+  useEffect(() => {
+    if (!autoVoice || !voiceEnabled || microstepsLoading || !microsteps) return
+    const timer = setTimeout(() => {
+      if (!audioStartedRef.current) setShowTapPrompt(true)
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [autoVoice, voiceEnabled, microstepsLoading, microsteps])
+
   // Speak a step aloud, then start listening when done
   const speak = useCallback((text: string) => {
     if (!('speechSynthesis' in window)) return
@@ -168,6 +181,7 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
       try { recognitionRef.current?.start(); setVoiceStatus('listening') }
       catch { setVoiceStatus('idle') }
     }
+    u.onstart = () => { audioStartedRef.current = true; setShowTapPrompt(false) }
     u.onend = afterSpeak
     // Chrome/Android sometimes never fires onend — onerror recovers the listening loop
     u.onerror = afterSpeak
@@ -232,6 +246,7 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
       voiceEnabledRef.current = false
       setVoiceEnabled(false)
       setVoiceStatus('idle')
+      setShowTapPrompt(false)
       speakingRef.current = false
       window.speechSynthesis?.cancel()
       try { recognitionRef.current?.abort() } catch {}
@@ -300,6 +315,19 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
           </div>
         ) : (
           <>
+            {showTapPrompt && (
+              <button
+                type="button"
+                onClick={() => {
+                  audioStartedRef.current = true
+                  setShowTapPrompt(false)
+                  speak(activeSteps[clampedStep] ?? '')
+                }}
+                className="mb-4 w-full flex items-center justify-center h-12 rounded-full bg-gray-900 text-white text-sm font-medium"
+              >
+                Tap to start reading aloud
+              </button>
+            )}
             <p className="text-sm text-gray-400 mb-4 font-medium tracking-wide uppercase">
               Step {clampedStep + 1} of {totalSteps}
               {microstepsError && <span className="ml-2 normal-case font-normal">(classic steps)</span>}
