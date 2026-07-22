@@ -286,8 +286,11 @@ function insertPrepSteps(
     if (!prep) continue
     const lowerBase = prep.baseName.toLowerCase()
     const lowerVerb = prep.verb.toLowerCase()
-    // Skip if any existing step already covers this prep
-    if (existingText.includes(lowerVerb) && existingText.includes(lowerBase)) continue
+    // Skip if any existing step already covers this prep.
+    // Use word-boundary regex so "minced" in "add the minced garlic" doesn't
+    // suppress the "Mince the garlic" prep step — only an imperative match counts.
+    const verbRegex = new RegExp(`\\b${lowerVerb}\\b`)
+    if (verbRegex.test(existingText) && existingText.includes(lowerBase)) continue
     prepInstructions.push(`${prep.verb} the ${prep.baseName}.`)
   }
 
