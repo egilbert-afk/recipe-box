@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   })
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'Something went wrong on our end. Email us at recipes.gilbert@gmail.com.' }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true }, { status: 201 })

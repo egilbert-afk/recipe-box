@@ -10,6 +10,19 @@ I am a beginning coder. Please help ensure I am learning proper coding processes
 
 ---
 
+## Error message philosophy
+
+Every error message in this app must follow these principles — no exceptions:
+
+- **Never leave the user stuck.** Every error state must include a clear next step the user can actually take.
+- **Never blame the user.** If something went wrong on our end, say so. Phrases like "invalid input" are fine for genuine user errors (wrong password, missing field). Phrases like "something went wrong" must acknowledge it's our problem, not theirs.
+- **Never show raw technical errors.** No Supabase messages, HTTP status codes, stack traces, or internal error strings — ever. These are meaningless and frightening to non-technical users.
+- **The next step must be honest.** Don't say "try again" if retrying won't help. Say "try again in a moment" for transient server issues. Say "refresh the page" only if that could genuinely help. Say "use the Feedback button" when the user may be stuck and needs to reach us.
+- **Always leave a door open.** If no technical fix is available, give them a human path: the Feedback button (available on every screen except cook mode) or email at recipes.gilbert@gmail.com. The user should never feel abandoned.
+- **The Feedback button is the last resort, not the first.** Only reference it when the user might genuinely be stuck with no self-serve option — e.g., kitchen creation fails during onboarding. Don't reference it for transient errors the user can retry themselves.
+
+---
+
 ## Core principles
 
 - **Never commit code without me reviewing it** and going through the proper checkpoints — pull requests and me pushing from terminal.
