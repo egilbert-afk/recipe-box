@@ -78,11 +78,15 @@ export async function fetchUrl(url: string): Promise<string> {
   })
 
   if (res.status === 403) {
-    throw new Error('This site blocked the request — paste the recipe URL directly into your browser, copy the text, and use manual entry instead.')
+    throw new Error('This site blocked the request. Try opening the recipe in your browser, copying the text, and pasting it manually.')
+  }
+
+  if (res.status === 401 || res.status === 402) {
+    throw new Error('This page requires a subscription. Try copying and pasting the recipe text manually.')
   }
 
   if (!res.ok) {
-    throw new Error(`Failed to fetch URL: ${res.status} ${res.statusText}`)
+    throw new Error('Could not read that page. Try copying and pasting the recipe text manually.')
   }
 
   return res.text()

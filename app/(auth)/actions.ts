@@ -17,7 +17,7 @@ export async function signIn(formData: FormData) {
 
   if (error) {
     const codeParam = code ? `&code=${code}` : save ? `&save=${save}` : ''
-    redirect(`/login?error=Invalid+email+or+password${codeParam}`)
+    redirect(`/login?error=Invalid+email+or+password.+Double-check+and+try+again.${codeParam}`)
   }
 
   if (code) redirect(`/onboarding?code=${code}`)
@@ -59,7 +59,13 @@ export async function signUp(formData: FormData) {
   const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: callbackUrl } })
 
   if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}${extraParam}`)
+    const raw = error.message.toLowerCase()
+    const friendlyMsg = raw.includes('user already registered') || raw.includes('already registered')
+      ? 'An account with that email already exists. Try signing in instead.'
+      : raw.includes('rate limit') || raw.includes('too many') || raw.includes('email sending')
+        ? 'Too many attempts. Please wait a few minutes and try again.'
+        : 'Something went wrong on our end. Tell us what happened using the Feedback button.'
+    redirect(`/signup?error=${encodeURIComponent(friendlyMsg)}${extraParam}`)
   }
 
   // When Supabase requires email confirmation, session is null — prompt the user.

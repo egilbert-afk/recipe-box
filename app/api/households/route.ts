@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (householdError) {
-    return NextResponse.json({ error: householdError.message }, { status: 500 })
+    return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
   }
 
   const { error: memberError } = await supabase
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
   if (memberError) {
     await supabase.from('households').delete().eq('id', household.id)
-    return NextResponse.json({ error: memberError.message }, { status: 500 })
+    return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
   }
 
   try {
@@ -105,7 +105,7 @@ export async function PATCH(request: NextRequest) {
     .single()
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'Couldn\'t rename your kitchen. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
   }
 
   return NextResponse.json(data)

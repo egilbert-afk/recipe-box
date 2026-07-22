@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     .insert({ household_id: household.id, user_id: user.id, role: 'member', invited_by: null })
 
   if (memberError) {
-    return NextResponse.json({ error: memberError.message }, { status: 500 })
+    return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
   }
 
   await trackEvent(user.id, household.id, 'household_joined')

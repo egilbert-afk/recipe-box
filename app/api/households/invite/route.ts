@@ -33,7 +33,7 @@ export async function POST() {
     .eq('id', membership.household_id)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'Couldn\'t regenerate the invite code. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
   }
 
   return NextResponse.json({ invite_code: newCode })

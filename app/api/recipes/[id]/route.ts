@@ -47,7 +47,7 @@ export async function DELETE(
     .eq('household_id', membership.household_id)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'Couldn\'t delete the recipe. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
   }
 
   return new NextResponse(null, { status: 204 })
@@ -105,7 +105,7 @@ export async function PATCH(
       if (error.code === 'PGRST116') {
         return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
       }
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Couldn\'t save your changes. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
     }
 
     return NextResponse.json(data)
@@ -161,7 +161,7 @@ export async function PATCH(
     if (recipeError.code === 'PGRST116') {
       return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
     }
-    return NextResponse.json({ error: recipeError.message }, { status: 500 })
+    return NextResponse.json({ error: 'Couldn\'t save your changes. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
   }
 
   if (!updated) {
@@ -176,7 +176,7 @@ export async function PATCH(
   ])
 
   if (ingredientsDelete.error || stepsDelete.error) {
-    return NextResponse.json({ error: 'Failed to update recipe' }, { status: 500 })
+    return NextResponse.json({ error: 'Couldn\'t save your changes. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
   }
   if (microstepsDelete.error) {
     console.error('Failed to clear microstep cache:', microstepsDelete.error.message)
@@ -193,7 +193,7 @@ export async function PATCH(
       }))
     )
     if (ingredientsError) {
-      return NextResponse.json({ error: ingredientsError.message }, { status: 500 })
+      return NextResponse.json({ error: 'Couldn\'t save your changes. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
     }
   }
 
@@ -206,7 +206,7 @@ export async function PATCH(
       }))
     )
     if (stepsError) {
-      return NextResponse.json({ error: stepsError.message }, { status: 500 })
+      return NextResponse.json({ error: 'Couldn\'t save your changes. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
     }
   }
 
