@@ -307,4 +307,4 @@ Work in this order:
 
 | Issue | Layer | Notes |
 |-------|-------|-------|
-| — | — | Populated during development |
+| Stale microstep cache after logic improvements | 5 | Microsteps are cached per recipe+servings in `recipe_microsteps`. When generation logic improves, cached results are stale. Editing the recipe clears the cache as a workaround. Fix: add a "Regenerate" option in cook mode that deletes the cache row and re-fetches. |
