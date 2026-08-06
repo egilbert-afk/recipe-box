@@ -116,17 +116,13 @@ Estimated Claude API cost per user: $0.25–0.75 one-time for a full free-tier i
 
 | Layer | What gets built |
 |-------|----------------|
-| 1–8 | ✅ Complete — core app, auth, archive |
-| 9 | Household model — `households` table, `household_members` join table, invite codes, `cook_sessions` table, `pantry_staples` table, `created_by` on recipes, updated RLS, migration of existing data, onboarding flow (create or join household) |
-| 10 | In-app feedback button |
-| 11 | PWA manifest + Share Sheet integration |
-| 12 | UI polish pass — before beta launch |
-| 13 | Implied prep steps — Claude surfaces mincing/chopping from ingredient lists |
-| 14 | Cook history and ratings UI |
-| 15 | Meal planning and shopping list |
-| 16 | Stripe + subscription + free tier enforcement |
-| 17 | Social login — Apple (required for App Store), Google |
-| 18 | Seasonal suggestions and personal cook time estimates |
+| 1–13 | ✅ Complete — core app, auth, archive, household model, analytics, feedback, UI polish, implied prep steps |
+| 14 | Discover — community recipe pool, filter + one-card UX, creator-first outbound links, external fallback |
+| 15 | Cook history and ratings UI |
+| 16 | Meal planning and shopping list |
+| 17 | Stripe + subscription + free tier enforcement |
+| 18 | Social login — Apple (required for App Store), Google |
+| 19 | Seasonal suggestions and personal cook time estimates |
 
 UI improvements woven throughout, with a focused UI pass (Layer 12) before beta launch.
 
@@ -165,7 +161,38 @@ Beta feedback surfaced a clear user behavior: people save recipes they want to t
 
 ---
 
-## Cook mode — voice interaction (next to build)
+## Discover
+
+A household new to organized recipe-keeping often stalls before their collection is large enough to feel useful. They save a few favorites, cook them on repeat, and abandon the habit before the value clicks. Discover solves this cold start problem by letting households browse recipes that other real Mise households are cooking.
+
+**The mechanic**
+Public-source recipes — any recipe captured from a recipe site URL — are anonymously contributed to a shared pool across all Mise households. When a household opens Discover, they see recipes other households are using, filtered to match what they're looking for.
+
+**Privacy**
+Contribution is anonymous. No user or household names are associated with pool recipes. Households are informed once at setup and can opt out in Settings at any time. Disclosure language: *"Recipes you save from public sites are anonymously added to a shared pool so other Mise households can discover them. You can turn this off in Settings."*
+
+**Creator philosophy**
+The primary action in Discover is "View on [site name]" — opening the original recipe page in a new tab. This sends real browser traffic to the creator, generating ad revenue and page views. "Add to My Recipes" is secondary — for households that have already seen the recipe or want to save it without visiting. When a recipe is added, it is cloned into the household's collection with the original source URL preserved and prominently attributed on the recipe detail page.
+
+**UX**
+- Footer nav: `My Recipes · Discover · Add · Settings`
+- Discover page opens with one recipe card already showing — no empty state, no extra tap required
+- Filter chips at top: meal type and cuisine
+- Card shows: title, source site, cuisine, meal type, ingredient list — enough to decide, not the full recipe
+- Primary action: **"View on [site name]"** — opens top of page in new tab
+- Secondary action: **"Add to My Recipes"** — clones recipe into their collection
+- **"Not for us"** — permanently dismisses that recipe for this household, loads the next
+- Pool thin or empty for active filters: curated external link to a relevant page on a partner site, opens in new tab
+
+**External fallback sites**
+- The Modern Proper — default for most meal type and cuisine combinations
+- Serious Eats — cuisine-specific destinations (Italian, Asian, French, Mexican)
+- Simply Recipes — approachable, everyday cooking
+- Punch — cocktails
+
+---
+
+## Cook mode — voice interaction
 
 Beta observation: users follow recipes from the recipe page without entering cook mode. Cook mode as a required workflow has friction.
 
