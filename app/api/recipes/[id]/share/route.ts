@@ -56,6 +56,7 @@ export async function POST(
     .single()
 
   if (error || !updated) {
+    console.error('[POST /api/recipes/[id]/share] update failed:', error)
     return NextResponse.json({ error: 'Failed to generate share link' }, { status: 500 })
   }
 

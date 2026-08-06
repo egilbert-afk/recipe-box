@@ -66,6 +66,7 @@ export async function POST(
     .single()
 
   if (recipeError || !cloned) {
+    console.error('[POST /api/share/save] recipe clone failed:', recipeError)
     return NextResponse.json({ error: 'Failed to save recipe' }, { status: 500 })
   }
 
@@ -76,6 +77,7 @@ export async function POST(
       sourceIngredients.map((ing) => ({ ...ing, recipe_id: cloned.id }))
     )
     if (ingError) {
+      console.error('[POST /api/share/save] ingredient insert failed:', ingError)
       await serviceClient.from('recipes').delete().eq('id', cloned.id)
       return NextResponse.json({ error: 'Failed to save recipe' }, { status: 500 })
     }
@@ -86,6 +88,7 @@ export async function POST(
       sourceSteps.map((step) => ({ ...step, recipe_id: cloned.id }))
     )
     if (stepError) {
+      console.error('[POST /api/share/save] step insert failed:', stepError)
       await serviceClient.from('recipes').delete().eq('id', cloned.id)
       return NextResponse.json({ error: 'Failed to save recipe' }, { status: 500 })
     }

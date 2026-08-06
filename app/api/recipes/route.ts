@@ -30,6 +30,7 @@ export async function GET() {
     .eq('archived', false)
 
   if (error) {
+    console.error('[GET /api/recipes] query failed:', error)
     return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
   }
 
@@ -137,6 +138,7 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (recipeError) {
+    console.error('[POST /api/recipes] recipe insert failed:', recipeError)
     return NextResponse.json({ error: 'Couldn\'t save your recipe. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
   }
 
@@ -153,6 +155,7 @@ export async function POST(request: NextRequest) {
     )
 
   if (ingredientsError) {
+    console.error('[POST /api/recipes] ingredient insert failed:', ingredientsError)
     await supabase.from('recipes').delete().eq('id', recipe.id)
     return NextResponse.json({ error: 'Couldn\'t save your recipe. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
   }
@@ -168,6 +171,7 @@ export async function POST(request: NextRequest) {
     )
 
   if (stepsError) {
+    console.error('[POST /api/recipes] step insert failed:', stepsError)
     await supabase.from('recipes').delete().eq('id', recipe.id)
     return NextResponse.json({ error: 'Couldn\'t save your recipe. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
   }

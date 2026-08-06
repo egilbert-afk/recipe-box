@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (householdError) {
+    console.error('[POST /api/households] household insert failed:', householdError)
     return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
   }
 
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
     .insert({ household_id: household.id, user_id: user.id, role: 'owner' })
 
   if (memberError) {
+    console.error('[POST /api/households] member insert failed:', memberError)
     await supabase.from('households').delete().eq('id', household.id)
     return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
   }

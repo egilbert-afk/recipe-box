@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
   })
 
   if (error) {
+    console.error('[GET /api/recipes/search] RPC error:', error)
     return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
   }
 

@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
   })
 
   if (error) {
+    console.error('[POST /api/feedback] insert failed:', error)
     return NextResponse.json({ error: 'Something went wrong on our end. Email us at recipes.gilbert@gmail.com.' }, { status: 500 })
   }
 
