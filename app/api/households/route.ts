@@ -145,7 +145,8 @@ export async function PATCH(request: NextRequest) {
     .single()
 
   if (error) {
-    return NextResponse.json({ error: 'Couldn\'t rename your kitchen. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
+    console.error('[PATCH /api/households] rename failed:', error)
+    return NextResponse.json({ error: 'Couldn\'t rename your kitchen. Try again. If you\'re still having trouble, use the Feedback button.' }, { status: 500 })
   }
 
   return NextResponse.json(data)

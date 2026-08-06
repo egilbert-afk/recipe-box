@@ -119,6 +119,9 @@ export function friendlyClaudeError(err: unknown): string {
   if (raw.includes('overloaded') || raw.includes('529')) {
     return 'The AI service is busy right now. Please try again in a moment.'
   }
+  if (raw.includes('malformed JSON') || raw.includes('incomplete recipe data')) {
+    return "We couldn't extract the recipe from that link. Try opening it in your browser, copying the recipe text, and pasting it here."
+  }
   return raw || 'Failed to read recipe'
 }
 
@@ -170,11 +173,11 @@ export function parseRawRecipeJson(rawText: string): CreateRecipeInput {
   try {
     parsed = stripFencesAndParse(rawText)
   } catch {
-    throw new Error('Claude returned malformed JSON — cannot parse recipe')
+    throw new Error('Claude returned malformed JSON: cannot parse recipe')
   }
 
   if (!isValidParsedRecipe(parsed)) {
-    throw new Error('Claude returned incomplete recipe data — please try manual entry')
+    throw new Error('Claude returned incomplete recipe data: please try manual entry')
   }
 
   // Collect non-empty implied prep steps

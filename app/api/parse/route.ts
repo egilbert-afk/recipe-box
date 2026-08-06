@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(recipe)
   } catch (err) {
     const msg = err instanceof Error ? err.message : ''
-    const autoSwitch = msg.includes('blocked') || msg.includes('subscription')
+    const autoSwitch = msg.includes('blocked') || msg.includes('subscription') || msg.includes('malformed JSON') || msg.includes('incomplete recipe data')
     return NextResponse.json({ error: friendlyClaudeError(err), autoSwitch }, { status: 422 })
   }
 }

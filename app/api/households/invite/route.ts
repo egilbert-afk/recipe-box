@@ -34,7 +34,7 @@ export async function POST() {
 
   if (error) {
     console.error('[POST /api/households/invite] update failed:', error)
-    return NextResponse.json({ error: 'Couldn\'t regenerate the invite code. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
+    return NextResponse.json({ error: 'Couldn\'t regenerate the invite code. Try again. If you\'re still having trouble, use the Feedback button.' }, { status: 500 })
   }
 
   return NextResponse.json({ invite_code: newCode })
