@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { sortTitle } from '@/lib/formatters'
 import { CAPTURE_METHODS, type CreateRecipeInput, type CaptureMethod } from '@/lib/types'
 import { trackEvent } from '@/lib/events'
+import { isPublicRecipeUrl } from '@/lib/utils'
 
 export async function GET() {
   const serverClient = await createSupabaseServerClient()
@@ -125,6 +126,7 @@ export async function POST(request: NextRequest) {
       cuisine_id: body.cuisine_id,
       meal_type_id: body.meal_type_id,
       source_url: body.source_url || null,
+      is_discoverable: isPublicRecipeUrl(body.source_url),
       servings: body.servings,
       notes: body.notes?.trim() || null,
       capture_method: captureMethod,
