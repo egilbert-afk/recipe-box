@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const tabs = [
-  { href: '/recipes', label: 'Recipes' },
+  { href: '/recipes', label: 'My Recipes' },
+  { href: '/discover', label: 'Discover' },
   { href: '/add', label: 'Add' },
   { href: '/archive', label: 'Archive' },
 ]
@@ -15,6 +16,7 @@ export default function BottomNav() {
   const show =
     pathname === '/recipes' ||
     (pathname.startsWith('/recipes/') && !pathname.endsWith('/cook')) ||
+    pathname === '/discover' ||
     pathname === '/add' ||
     pathname === '/archive'
 
@@ -27,7 +29,7 @@ export default function BottomNav() {
           const active =
             href === '/recipes'
               ? pathname === '/recipes' || pathname.startsWith('/recipes/')
-              : pathname === href
+              : pathname.startsWith(href)
           return (
             <Link
               key={href}
