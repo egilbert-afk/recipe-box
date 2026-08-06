@@ -120,7 +120,7 @@ export function friendlyClaudeError(err: unknown): string {
     return 'The AI service is busy right now. Please try again in a moment.'
   }
   if (raw.includes('malformed JSON') || raw.includes('incomplete recipe data')) {
-    return "We couldn't extract the recipe from that link. Try opening it in your browser, copying the recipe text, and pasting it here."
+    return "We couldn't extract a recipe from that. Try copying the recipe text and pasting it here."
   }
   return raw || 'Failed to read recipe'
 }
