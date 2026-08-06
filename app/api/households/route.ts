@@ -70,13 +70,51 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { name?: string }
+  let body: { name?: string; discover_opt_out?: boolean }
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
+  // ── discover_opt_out — any member can toggle ──────────────────────────────
+  if (body.discover_opt_out !== undefined) {
+    if (body.name !== undefined) {
+      return NextResponse.json(
+        { error: 'Send discover_opt_out and name in separate requests' },
+        { status: 400 }
+      )
+    }
+    if (typeof body.discover_opt_out !== 'boolean') {
+      return NextResponse.json({ error: 'discover_opt_out must be a boolean' }, { status: 400 })
+    }
+
+    const { data: membership } = await supabase
+      .from('household_members')
+      .select('household_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!membership) {
+      return NextResponse.json({ error: 'No kitchen found' }, { status: 404 })
+    }
+
+    const { error } = await supabase
+      .from('households')
+      .update({ discover_opt_out: body.discover_opt_out })
+      .eq('id', membership.household_id)
+
+    if (error) {
+      return NextResponse.json(
+        { error: 'Couldn\'t update your Discover setting. Try again in a moment.' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── name — owner only ─────────────────────────────────────────────────────
   if (!body.name?.trim()) {
     return NextResponse.json({ error: 'Kitchen name is required' }, { status: 400 })
   }

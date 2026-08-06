@@ -16,7 +16,7 @@ export type MealTypeId =
   | 'dessert'
   | 'cocktail'
 
-export const CAPTURE_METHODS = ['manual', 'url', 'document', 'email', 'text_paste'] as const
+export const CAPTURE_METHODS = ['manual', 'url', 'document', 'email', 'text_paste', 'discover'] as const
 export type CaptureMethod = typeof CAPTURE_METHODS[number]
 
 export interface Cuisine {
@@ -51,6 +51,8 @@ export interface Recipe {
   cuisine_id: CuisineId
   meal_type_id: MealTypeId
   source_url: string | null
+  jump_url: string | null
+  is_discoverable: boolean
   servings: number
   notes: string | null
   archived: boolean
@@ -63,6 +65,25 @@ export interface Recipe {
 export interface RecipeWithDetails extends Recipe {
   ingredients: Ingredient[]
   steps: Step[]
+}
+
+export interface DiscoverCard {
+  id: string
+  title: string
+  source_url: string
+  cuisine_id: CuisineId
+  meal_type_id: MealTypeId
+  servings: number
+  ingredients: Array<{
+    name: string
+    amount: number | null
+    unit: string | null
+    order_index: number
+  }>
+  steps: Array<{
+    instruction: string
+    order_index: number
+  }>
 }
 
 export interface UpdateRecipeInput {

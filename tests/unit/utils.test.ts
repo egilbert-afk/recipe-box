@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { sanitizeShareToken, sanitizeInviteCode } from '@/lib/utils'
+import { sanitizeShareToken, sanitizeInviteCode, isPublicRecipeUrl } from '@/lib/utils'
 
 describe('sanitizeShareToken', () => {
   it('returns null for null input', () => {
@@ -34,6 +34,68 @@ describe('sanitizeShareToken', () => {
 
   it('returns null for a SQL injection attempt', () => {
     expect(sanitizeShareToken("'; DROP TABLE recipes; --")).toBeNull()
+  })
+})
+
+describe('isPublicRecipeUrl', () => {
+  it('returns false for null', () => {
+    expect(isPublicRecipeUrl(null)).toBe(false)
+  })
+
+  it('returns false for undefined', () => {
+    expect(isPublicRecipeUrl(undefined)).toBe(false)
+  })
+
+  it('returns false for empty string', () => {
+    expect(isPublicRecipeUrl('')).toBe(false)
+  })
+
+  it('returns false for an invalid URL', () => {
+    expect(isPublicRecipeUrl('not a url')).toBe(false)
+  })
+
+  it('returns false for a non-http protocol', () => {
+    expect(isPublicRecipeUrl('ftp://recipes.example.com/pasta')).toBe(false)
+  })
+
+  it('returns true for a known public recipe site', () => {
+    expect(isPublicRecipeUrl('https://www.seriouseats.com/pasta-recipe')).toBe(true)
+  })
+
+  it('returns true for a food blog', () => {
+    expect(isPublicRecipeUrl('https://smittenkitchen.com/2024/01/pasta')).toBe(true)
+  })
+
+  it('returns false for a Google Docs link', () => {
+    expect(isPublicRecipeUrl('https://docs.google.com/document/d/abc123/edit')).toBe(false)
+  })
+
+  it('returns false for a Google Drive link', () => {
+    expect(isPublicRecipeUrl('https://drive.google.com/file/d/abc123/view')).toBe(false)
+  })
+
+  it('returns false for a Notion link', () => {
+    expect(isPublicRecipeUrl('https://notion.so/my-recipe-abc123')).toBe(false)
+  })
+
+  it('returns false for a Dropbox link', () => {
+    expect(isPublicRecipeUrl('https://www.dropbox.com/scl/fi/abc123/recipe.pdf')).toBe(false)
+  })
+
+  it('returns false for localhost', () => {
+    expect(isPublicRecipeUrl('http://localhost:3000/recipe')).toBe(false)
+  })
+
+  it('returns false for a private IP address', () => {
+    expect(isPublicRecipeUrl('http://192.168.1.1/recipe')).toBe(false)
+  })
+
+  it('returns true for an http (non-https) public site', () => {
+    expect(isPublicRecipeUrl('http://www.simplyrecipes.com/pasta')).toBe(true)
+  })
+
+  it('returns false for a subdomain of a private domain', () => {
+    expect(isPublicRecipeUrl('https://myworkspace.sharepoint.com/sites/recipes')).toBe(false)
   })
 })
 

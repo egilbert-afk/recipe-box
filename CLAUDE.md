@@ -254,34 +254,35 @@ Existing `await trackEvent(...)` calls throughout the codebase are a Known Issue
 
 Any endpoint that creates or joins shared resources — household creation, invite code join, share link actions — must have rate limiting before real users arrive. This is a pre-launch requirement, not a post-launch cleanup. Add it from the start on new endpoints of this type, not as a Known Issue to revisit later.
 
+### Discover
+
+- A recipe is eligible for the community pool if it has a `source_url` and the household has not opted out.
+- When a user adds a recipe from Discover, clone the parsed recipe into their household — never re-parse the source URL.
+- Always carry `source_url` forward on cloned recipes. Source attribution is non-negotiable.
+- Display the source site name and URL prominently on every recipe detail page — not buried in metadata.
+- During parsing, extract the "Jump to Recipe" link href if present and store as `jump_url`. Do not use `jump_url` for Discover outbound links — those always open `source_url` (top of page) in a new tab.
+- "Not for us" dismissals are permanent per household. Never re-surface a dismissed recipe in Discover.
+- When the pool is empty for a filter combination, show a curated external fallback link — never an empty state. External sites: The Modern Proper, Serious Eats, Simply Recipes (general); Punch (cocktails). All external links open in a new tab.
+- The privacy disclosure at household setup must include the word "anonymously" and mention the opt-out in Settings.
+
 ---
 
-## Current focus — quality before features
+## Current focus — Layer 14: Discover
 
-Layers 1–13 are complete. Rather than continuing to add layers, the current priority is making the existing app more useful, intuitive, and polished before building new capabilities.
+Layers 1–13 are complete. The quality pass (voice/microstep polish, discoverability, blocked-site handling) is also complete. The current priority is building Discover — the community recipe pool feature.
 
-Work in this order:
+See the `### Discover` rules section above and the `## Discover` section in PRODUCT.md for full design decisions.
 
-**1. Polish the two best features (microsteps + voice)**
-- Fix voice command/button label mismatch: command is "back" but button says "Prev" — rename button to "Back"
-- Reduce microstep first-load latency: remove the `thinking` field from the Claude microsteps prompt
-- Fix dry seasonings splitting into one step per spice — they should be combined into one step
-
-**2. Make those features discoverable**
-- Surface voice and microsteps earlier/more prominently in the cooking flow so new users find them without stumbling
-
-**3. Capture robustness**
-- Add a domain blocklist for known-blocked sites (Dotdash Meredith family: Simply Recipes, Serious Eats, Allrecipes, The Spruce Eats) — show an immediate fallback prompt instead of waiting for a 403
-
-**Future layers (deferred — revisit after quality pass)**
+**Upcoming layers**
 
 | Layer | What gets built |
 |-------|----------------|
-| 14 | Cook history and ratings UI |
-| 15 | Meal planning and shopping list |
-| 16 | Stripe + subscription + free tier enforcement |
-| 17 | Social login — Apple and Google |
-| 18 | Seasonal suggestions and personal cook time estimates |
+| 14 | Discover — community recipe pool, filter + one-card UX, creator-first outbound links, external fallback |
+| 15 | Cook history and ratings UI |
+| 16 | Meal planning and shopping list |
+| 17 | Stripe + subscription + free tier enforcement |
+| 18 | Social login — Apple and Google |
+| 19 | Seasonal suggestions and personal cook time estimates |
 
 **Completed layers**
 

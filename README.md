@@ -42,6 +42,13 @@ Built for a household that cooks from popular recipe sites, receives recommendat
 - **Cooking mode** — large text, one step at a time, screen stays awake, big tap targets for messy hands
 - **Per-session scaling** — set your servings for tonight; all ingredient amounts recalculate automatically
 
+### Discovering new recipes
+
+- **Discover** — browse a community pool of recipes that other Mise households are cooking; filter by meal type and cuisine; one card at a time to avoid decision fatigue
+- Primary action: view the recipe directly on the source site (new tab) — creator gets a real page view
+- Secondary action: add to your collection in one tap — recipe is cloned with full source attribution
+- When the pool is thin, a curated link to a partner recipe site keeps you moving
+
 ### Managing your collection
 
 - **Soft archive** — remove recipes that didn't work for your family without permanently deleting them
@@ -139,11 +146,12 @@ Each layer is fully tested and working before the next begins.
 | 11 | In-app feedback button — feedback table, POST /api/feedback, feedback form in app header, shown on /admin |
 | 12 | UI polish pass — bottom nav, recipe sorting and filtering by cuisine/meal type, known issues cleanup, shared auth helper |
 | 13 | Implied prep steps — Claude surfaces mincing/chopping from ingredient lists |
-| 14 | Cook history and ratings UI |
-| 15 | Meal planning and shopping list |
-| 16 | Stripe + subscription + free tier enforcement |
-| 17 | Social login — Apple and Google |
-| 18 | Seasonal suggestions and personal cook time estimates |
+| 14 | Discover — community recipe pool, filter + one-card UX, creator-first outbound links, external fallback |
+| 15 | Cook history and ratings UI |
+| 16 | Meal planning and shopping list |
+| 17 | Stripe + subscription + free tier enforcement |
+| 18 | Social login — Apple and Google |
+| 19 | Seasonal suggestions and personal cook time estimates |
 
 ---
 
