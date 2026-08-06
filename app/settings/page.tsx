@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { supabase } from '@/lib/supabase'
 import { KitchenNameEditor } from './KitchenNameEditor'
 import { InviteCode } from './InviteCode'
+import { DiscoverOptOut } from './DiscoverOptOut'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,7 +23,7 @@ export default async function SettingsPage() {
 
   const { data: household } = await supabase
     .from('households')
-    .select('name, invite_code')
+    .select('name, invite_code, discover_opt_out')
     .eq('id', membership.household_id)
     .single()
 
@@ -72,6 +73,15 @@ export default async function SettingsPage() {
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Invite a member</h2>
           <InviteCode code={household.invite_code} kitchenName={household.name} />
+        </section>
+
+        {/* Discover */}
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Discover</h2>
+          <DiscoverOptOut initialOptOut={household.discover_opt_out ?? false} />
+          <p className="text-xs text-gray-400 leading-relaxed">
+            When enabled, recipes you've added from the web may appear anonymously in other kitchens' Discover feed. Individual recipe sources are never revealed.
+          </p>
         </section>
 
         {/* Members */}

@@ -132,6 +132,9 @@ export function OnboardingForm({ initialCode, saveToken }: { initialCode?: strin
             >
               {isPending ? 'Setting up…' : "Let's go"}
             </button>
+            <p className="text-xs text-gray-400 text-center leading-relaxed">
+              Recipes you add from the web may be shown anonymously to other Recipe Box kitchens in Discover. You can opt out any time in Settings.
+            </p>
           </>
         ) : (
           <>
