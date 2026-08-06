@@ -36,8 +36,11 @@ export async function POST(request: NextRequest) {
     recipe_id: recipeId,
   })
 
-  // Postgres unique_violation (23505) means already dismissed — treat as success
-  if (error && error.code !== '23505') {
+  if (error) {
+    if (error.code === '23505') {
+      // Postgres unique_violation — already dismissed, idempotent success
+      return NextResponse.json({ ok: true }, { status: 200 })
+    }
     console.error('[discover/dismiss] insert error:', error)
     return NextResponse.json(
       { error: 'Something went wrong. Try again in a moment.' },

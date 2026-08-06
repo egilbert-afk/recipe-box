@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Settings, ArrowLeft } from 'lucide-react'
 import { CUISINES, MEAL_TYPES, CUISINE_LABEL, MEAL_TYPE_LABEL } from '@/lib/constants'
@@ -29,8 +29,12 @@ export default function DiscoverPage() {
   const [error, setError] = useState<string | null>(null)
   const [activeCuisine, setActiveCuisine] = useState<CuisineId | null>(null)
   const [activeMealType, setActiveMealType] = useState<MealTypeId | null>(null)
+  const fetchCounterRef = useRef(0)
 
   const fetchCard = useCallback(async (cuisine: CuisineId | null, mealType: MealTypeId | null) => {
+    fetchCounterRef.current += 1
+    const myFetch = fetchCounterRef.current
+
     setLoading(true)
     setError(null)
     setEmpty(false)
@@ -40,20 +44,25 @@ export default function DiscoverPage() {
       if (cuisine) params.set('cuisine_id', cuisine)
       if (mealType) params.set('meal_type_id', mealType)
       const res = await fetch(`/api/discover?${params}`)
+      if (fetchCounterRef.current !== myFetch) return
       if (!res.ok) {
         setError('Something went wrong. Try again in a moment.')
         return
       }
       const data = await res.json()
+      if (fetchCounterRef.current !== myFetch) return
       if (data.empty) {
         setEmpty(true)
       } else {
         setCard(data.card)
       }
     } catch {
+      if (fetchCounterRef.current !== myFetch) return
       setError('Something went wrong. Try again in a moment.')
     } finally {
-      setLoading(false)
+      if (fetchCounterRef.current === myFetch) {
+        setLoading(false)
+      }
     }
   }, [])
 

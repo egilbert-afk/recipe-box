@@ -79,6 +79,12 @@ export async function PATCH(request: NextRequest) {
 
   // ── discover_opt_out — any member can toggle ──────────────────────────────
   if (body.discover_opt_out !== undefined) {
+    if (body.name !== undefined) {
+      return NextResponse.json(
+        { error: 'Send discover_opt_out and name in separate requests' },
+        { status: 400 }
+      )
+    }
     if (typeof body.discover_opt_out !== 'boolean') {
       return NextResponse.json({ error: 'discover_opt_out must be a boolean' }, { status: 400 })
     }

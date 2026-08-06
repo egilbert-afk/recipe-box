@@ -46,6 +46,22 @@ function makeSelectList(result: object) {
   return chain
 }
 
+function makeSelectListError(error: object) {
+  const chain: Record<string, unknown> = {}
+  for (const m of ['select', 'eq']) chain[m] = vi.fn().mockReturnValue(chain)
+  chain.order = vi.fn().mockResolvedValue({ data: null, error })
+  return chain
+}
+
+// Simulates .select('*', { count: 'exact', head: true }).eq().eq().gte()
+function makeCountChain(count: number) {
+  const chain: Record<string, unknown> = {}
+  for (const m of ['select', 'eq', 'gte']) chain[m] = vi.fn().mockReturnValue(chain)
+  chain.then = (resolve: (v: unknown) => unknown, _reject?: (e: unknown) => unknown) =>
+    Promise.resolve({ count, error: null }).then(resolve)
+  return chain
+}
+
 function makeInsertSingle(result: object) {
   const chain: Record<string, unknown> = {}
   for (const m of ['insert', 'select', 'single']) chain[m] = vi.fn().mockReturnValue(chain)
@@ -89,16 +105,22 @@ describe('GET /api/discover', () => {
     rpcError = null as object | null,
     ingredients = INGREDIENTS as object[],
     steps = STEPS as object[],
+    ingError = null as object | null,
+    stepError = null as object | null,
   } = {}) {
     mockFrom.mockImplementation((table: string) => {
       if (table === 'household_members') {
         return makeSelectSingle({ data: membership, error: null }) as never
       }
       if (table === 'ingredients') {
-        return makeSelectList({ data: ingredients, error: null }) as never
+        return ingError
+          ? makeSelectListError(ingError) as never
+          : makeSelectList({ data: ingredients, error: null }) as never
       }
       if (table === 'steps') {
-        return makeSelectList({ data: steps, error: null }) as never
+        return stepError
+          ? makeSelectListError(stepError) as never
+          : makeSelectList({ data: steps, error: null }) as never
       }
       return makeWriteChain() as never
     })
@@ -175,6 +197,20 @@ describe('GET /api/discover', () => {
     const res = await GET(req)
     expect(res.status).toBe(500)
   })
+
+  it('returns 500 when the ingredient fetch errors', async () => {
+    setupDiscover({ ingError: { message: 'DB error' } })
+    const req = new NextRequest('http://localhost/api/discover')
+    const res = await GET(req)
+    expect(res.status).toBe(500)
+  })
+
+  it('returns 500 when the step fetch errors', async () => {
+    setupDiscover({ stepError: { message: 'DB error' } })
+    const req = new NextRequest('http://localhost/api/discover')
+    const res = await GET(req)
+    expect(res.status).toBe(500)
+  })
 })
 
 // ── POST /api/discover/add ────────────────────────────────────────────────────
@@ -182,6 +218,7 @@ describe('GET /api/discover', () => {
 describe('POST /api/discover/add', () => {
   function setupAdd({
     membership = MEMBERSHIP as object | null,
+    recentAddCount = 0,
     source = {
       id: 'pool-1',
       title: 'Lemon Pasta',
@@ -207,8 +244,9 @@ describe('POST /api/discover/add', () => {
       }
       if (table === 'recipes') {
         counts.recipes++
-        if (counts.recipes === 1) return makeSelectSingle({ data: source, error: null }) as never
-        if (counts.recipes === 2) return (cloneInsertChain ?? makeInsertSingle(cloneResult)) as never
+        if (counts.recipes === 1) return makeCountChain(recentAddCount) as never  // rate limit check
+        if (counts.recipes === 2) return makeSelectSingle({ data: source, error: null }) as never
+        if (counts.recipes === 3) return (cloneInsertChain ?? makeInsertSingle(cloneResult)) as never
         rollback.chain = makeWriteChain()
         return rollback.chain as never
       }
@@ -283,14 +321,20 @@ describe('POST /api/discover/add', () => {
     expect(await res.json()).toMatchObject({ recipe_id: 'clone-1' })
   })
 
-  it('carries source_url and is_discoverable onto the cloned recipe', async () => {
+  it('carries source_url onto the clone and sets is_discoverable to false so it does not re-enter the pool', async () => {
     const cloneChain = makeInsertSingle({ data: { id: 'clone-1' }, error: null })
     setupAdd({ cloneInsertChain: cloneChain })
     await addRecipe(makeRequest({ recipe_id: 'pool-1' }))
     const insertArg = (cloneChain.insert as ReturnType<typeof vi.fn>).mock.calls[0][0]
     expect(insertArg.source_url).toBe('https://seriouseats.com/lemon-pasta')
-    expect(insertArg.is_discoverable).toBe(true)
+    expect(insertArg.is_discoverable).toBe(false)
     expect(insertArg.capture_method).toBe('discover')
+  })
+
+  it('returns 429 when the household has hit the hourly rate limit', async () => {
+    setupAdd({ recentAddCount: 20 })
+    const res = await addRecipe(makeRequest({ recipe_id: 'pool-1' }))
+    expect(res.status).toBe(429)
   })
 
   it('returns 500 when clone insert fails', async () => {
@@ -303,7 +347,7 @@ describe('POST /api/discover/add', () => {
     const { counts, rollback } = setupAdd({ ingredientInsertError: { message: 'DB error' } })
     const res = await addRecipe(makeRequest({ recipe_id: 'pool-1' }))
     expect(res.status).toBe(500)
-    expect(counts.recipes).toBe(3)
+    expect(counts.recipes).toBe(4)  // count + source + clone + rollback
     expect(rollback.chain?.delete).toHaveBeenCalled()
   })
 })
@@ -362,10 +406,10 @@ describe('POST /api/discover/dismiss', () => {
     expect(await res.json()).toMatchObject({ ok: true })
   })
 
-  it('returns 201 when recipe was already dismissed (unique constraint)', async () => {
+  it('returns 200 when recipe was already dismissed (idempotent)', async () => {
     setupDismiss({ insertError: { code: '23505', message: 'duplicate key' } })
     const res = await dismiss(makeRequest({ recipe_id: 'pool-1' }))
-    expect(res.status).toBe(201)
+    expect(res.status).toBe(200)
   })
 
   it('returns 500 on unexpected DB error', async () => {

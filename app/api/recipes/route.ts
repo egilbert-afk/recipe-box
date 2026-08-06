@@ -25,7 +25,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('recipes')
-    .select('id, title, cuisine_id, meal_type_id, source_url, servings, capture_method, created_at, updated_at')
+    .select('id, title, cuisine_id, meal_type_id, source_url, is_discoverable, jump_url, servings, capture_method, created_at, updated_at')
     .eq('household_id', membership.household_id)
     .eq('archived', false)
 

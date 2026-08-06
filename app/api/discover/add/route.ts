@@ -20,6 +20,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No household found' }, { status: 403 })
   }
 
+  // Rate limit: 20 discover clones per hour per household
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+  const { count: recentCount } = await serviceClient
+    .from('recipes')
+    .select('*', { count: 'exact', head: true })
+    .eq('household_id', membership.household_id)
+    .eq('capture_method', 'discover')
+    .gte('created_at', oneHourAgo)
+
+  if ((recentCount ?? 0) >= 20) {
+    return NextResponse.json(
+      { error: "You've added a lot of recipes recently. Wait a bit before adding more." },
+      { status: 429 }
+    )
+  }
+
   let body: { recipe_id?: string }
   try {
     body = await request.json()
@@ -66,7 +82,7 @@ export async function POST(request: NextRequest) {
       meal_type_id: source.meal_type_id,
       servings: source.servings,
       source_url: source.source_url,
-      is_discoverable: true,
+      is_discoverable: false,
       notes: source.notes,
       capture_method: 'discover',
       household_id: membership.household_id,

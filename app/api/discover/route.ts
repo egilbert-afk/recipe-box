@@ -44,7 +44,10 @@ export async function GET(request: NextRequest) {
 
   const recipe = rows[0]
 
-  const [{ data: ingredients }, { data: steps }] = await Promise.all([
+  const [
+    { data: ingredients, error: ingError },
+    { data: steps, error: stepError },
+  ] = await Promise.all([
     serviceClient
       .from('ingredients')
       .select('name, amount, unit, order_index')
@@ -56,6 +59,14 @@ export async function GET(request: NextRequest) {
       .eq('recipe_id', recipe.id)
       .order('order_index'),
   ])
+
+  if (ingError || stepError) {
+    console.error('[discover] fetch error:', ingError ?? stepError)
+    return NextResponse.json(
+      { error: 'Something went wrong on our end. Try again in a moment.' },
+      { status: 500 }
+    )
+  }
 
   return NextResponse.json({
     card: {
