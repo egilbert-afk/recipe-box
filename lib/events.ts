@@ -11,6 +11,7 @@ export const VALID_EVENTS = [
   'recipe_shared',
   'recipe_saved_from_share',
   'signup_from_share',
+  'discover_dismissed',
 ] as const
 
 export type EventName = typeof VALID_EVENTS[number]

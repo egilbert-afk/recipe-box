@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase as serviceClient } from '@/lib/supabase'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { trackEvent } from '@/lib/events'
 
 export async function POST(request: NextRequest) {
   const serverClient = await createSupabaseServerClient()
@@ -47,6 +48,10 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+
+  trackEvent(user.id, membership.household_id, 'discover_dismissed').catch(
+    (err) => console.error('[discover/dismiss] trackEvent failed:', err)
+  )
 
   return NextResponse.json({ ok: true }, { status: 201 })
 }

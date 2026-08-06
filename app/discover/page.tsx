@@ -29,7 +29,12 @@ export default function DiscoverPage() {
   const [error, setError] = useState<string | null>(null)
   const [activeCuisine, setActiveCuisine] = useState<CuisineId | null>(null)
   const [activeMealType, setActiveMealType] = useState<MealTypeId | null>(null)
+  const [expanded, setExpanded] = useState(false)
   const fetchCounterRef = useRef(0)
+
+  useEffect(() => {
+    setExpanded(false)
+  }, [card])
 
   const fetchCard = useCallback(async (cuisine: CuisineId | null, mealType: MealTypeId | null) => {
     fetchCounterRef.current += 1
@@ -241,7 +246,7 @@ export default function DiscoverPage() {
                     Ingredients
                   </p>
                   <ul className="space-y-1 text-sm text-gray-700">
-                    {card.ingredients.slice(0, 8).map((ing, i) => (
+                    {(expanded ? card.ingredients : card.ingredients.slice(0, 8)).map((ing, i) => (
                       <li key={i}>
                         {ing.amount != null ? (
                           <span className="text-gray-500">{ing.amount}{ing.unit ? ` ${ing.unit}` : ''} </span>
@@ -249,20 +254,40 @@ export default function DiscoverPage() {
                         {ing.name}
                       </li>
                     ))}
-                    {card.ingredients.length > 8 && (
-                      <li className="text-gray-400 text-xs">
-                        +{card.ingredients.length - 8} more —{' '}
-                        <a
-                          href={card.source_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline hover:text-gray-600"
-                        >
-                          see the full recipe
-                        </a>
-                      </li>
-                    )}
                   </ul>
+                  {!expanded && (card.ingredients.length > 8 || card.steps.length > 0) && (
+                    <button
+                      onClick={() => setExpanded(true)}
+                      className="mt-2 text-xs text-gray-400 hover:text-gray-600 underline"
+                    >
+                      {card.ingredients.length > 8
+                        ? `+${card.ingredients.length - 8} more · Show full recipe`
+                        : 'Show full recipe'}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Steps — visible when expanded */}
+              {expanded && card.steps.length > 0 && (
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                    Steps
+                  </p>
+                  <ol className="space-y-2 text-sm text-gray-700">
+                    {card.steps.map((step, i) => (
+                      <li key={i} className="flex gap-3">
+                        <span className="text-gray-400 font-medium shrink-0">{i + 1}.</span>
+                        <span className="leading-snug">{step.instruction}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  <button
+                    onClick={() => setExpanded(false)}
+                    className="mt-3 text-xs text-gray-400 hover:text-gray-600 underline"
+                  >
+                    Show less
+                  </button>
                 </div>
               )}
 

@@ -32,6 +32,7 @@ const EVENT_LABEL: Record<string, string> = {
   recipe_shared: 'Recipe shared',
   recipe_saved_from_share: 'Recipe saved from share',
   signup_from_share: 'Signup from share',
+  discover_dismissed: 'Discover dismissed',
 }
 
 export default async function AdminPage() {
@@ -66,6 +67,17 @@ export default async function AdminPage() {
   const last30  = countByEvent(e => new Date(e.created_at) >= d30)
   const prior30 = countByEvent(e => new Date(e.created_at) >= d60 && new Date(e.created_at) < d30)
   const allTime = countByEvent(() => true)
+
+  function isDiscoverAdd(e: EventRow) {
+    return e.event_name === 'recipe_added' && e.properties?.capture_method === 'discover'
+  }
+  const discoverAdded = {
+    last7:   rows.filter(e => new Date(e.created_at) >= d7  && isDiscoverAdd(e)).length,
+    prior7:  rows.filter(e => new Date(e.created_at) >= d14 && new Date(e.created_at) < d7  && isDiscoverAdd(e)).length,
+    last30:  rows.filter(e => new Date(e.created_at) >= d30 && isDiscoverAdd(e)).length,
+    prior30: rows.filter(e => new Date(e.created_at) >= d60 && new Date(e.created_at) < d30 && isDiscoverAdd(e)).length,
+    all:     rows.filter(isDiscoverAdd).length,
+  }
 
   const byHousehold = rows.reduce<Record<string, number>>((acc, e) => {
     const key = e.household_id ?? '(no kitchen)'
@@ -109,14 +121,26 @@ export default async function AdminPage() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {Object.keys(EVENT_LABEL).map(name => (
-                <tr key={name}>
-                  <td className="py-2 pr-4 text-gray-700">{EVENT_LABEL[name]}</td>
-                  <td className="py-2 pr-4 text-right font-semibold">{last7[name] ?? 0}</td>
-                  <td className="py-2 pr-4 text-right text-gray-400">{prior7[name] ?? 0}</td>
-                  <td className="py-2 pr-4 text-right font-semibold">{last30[name] ?? 0}</td>
-                  <td className="py-2 pr-4 text-right text-gray-400">{prior30[name] ?? 0}</td>
-                  <td className="py-2 text-right font-semibold">{allTime[name] ?? 0}</td>
-                </tr>
+                <>
+                  <tr key={name}>
+                    <td className="py-2 pr-4 text-gray-700">{EVENT_LABEL[name]}</td>
+                    <td className="py-2 pr-4 text-right font-semibold">{last7[name] ?? 0}</td>
+                    <td className="py-2 pr-4 text-right text-gray-400">{prior7[name] ?? 0}</td>
+                    <td className="py-2 pr-4 text-right font-semibold">{last30[name] ?? 0}</td>
+                    <td className="py-2 pr-4 text-right text-gray-400">{prior30[name] ?? 0}</td>
+                    <td className="py-2 text-right font-semibold">{allTime[name] ?? 0}</td>
+                  </tr>
+                  {name === 'recipe_added' && (
+                    <tr key="discover_added">
+                      <td className="py-1.5 pr-4 pl-4 text-gray-400 text-xs">↳ from Discover</td>
+                      <td className="py-1.5 pr-4 text-right text-xs font-semibold">{discoverAdded.last7}</td>
+                      <td className="py-1.5 pr-4 text-right text-xs text-gray-400">{discoverAdded.prior7}</td>
+                      <td className="py-1.5 pr-4 text-right text-xs font-semibold">{discoverAdded.last30}</td>
+                      <td className="py-1.5 pr-4 text-right text-xs text-gray-400">{discoverAdded.prior30}</td>
+                      <td className="py-1.5 text-right text-xs font-semibold">{discoverAdded.all}</td>
+                    </tr>
+                  )}
+                </>
               ))}
             </tbody>
           </table>
