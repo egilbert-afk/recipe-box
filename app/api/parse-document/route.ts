@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'At least one image is required' }, { status: 400 })
     }
     if (body.images.length > 10) {
-      return NextResponse.json({ error: 'Too many images — maximum 10 per request' }, { status: 400 })
+      return NextResponse.json({ error: 'Too many images. Maximum 10 per request.' }, { status: 400 })
     }
 
     for (const img of body.images) {

@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
 
   if (recipeError) {
     console.error('[POST /api/recipes] recipe insert failed:', recipeError)
-    return NextResponse.json({ error: 'Couldn\'t save your recipe. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
+    return NextResponse.json({ error: 'Couldn\'t save your recipe. Try again. If you\'re still having trouble, use the Feedback button.' }, { status: 500 })
   }
 
   const { error: ingredientsError } = await supabase
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
   if (ingredientsError) {
     console.error('[POST /api/recipes] ingredient insert failed:', ingredientsError)
     await supabase.from('recipes').delete().eq('id', recipe.id)
-    return NextResponse.json({ error: 'Couldn\'t save your recipe. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
+    return NextResponse.json({ error: 'Couldn\'t save your recipe. Try again. If you\'re still having trouble, use the Feedback button.' }, { status: 500 })
   }
 
   const { error: stepsError } = await supabase
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
   if (stepsError) {
     console.error('[POST /api/recipes] step insert failed:', stepsError)
     await supabase.from('recipes').delete().eq('id', recipe.id)
-    return NextResponse.json({ error: 'Couldn\'t save your recipe. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
+    return NextResponse.json({ error: 'Couldn\'t save your recipe. Try again. If you\'re still having trouble, use the Feedback button.' }, { status: 500 })
   }
 
   await trackEvent(user.id, membership.household_id, 'recipe_added', { capture_method: captureMethod })

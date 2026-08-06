@@ -59,7 +59,7 @@ export default function FeedbackButton() {
             </p>
 
             {status === 'sent' ? (
-              <p className="text-green-600 font-medium py-4 text-center">Thanks — got it!</p>
+              <p className="text-green-600 font-medium py-4 text-center">Thanks, got it!</p>
             ) : (
               <>
                 <textarea
@@ -71,7 +71,7 @@ export default function FeedbackButton() {
                   className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
                 {status === 'error' && (
-                  <p className="text-red-500 text-sm">Something went wrong — try again.</p>
+                  <p className="text-red-500 text-sm">Something went wrong. Try again.</p>
                 )}
                 <div className="flex gap-3">
                   <button

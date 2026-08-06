@@ -10,8 +10,8 @@ export function InviteCode({ code, kitchenName }: { code: string; kitchenName: s
   }, [code])
 
   const shareTitle = `Join ${kitchenName} on Recipe Box`
-  const shareText = `I'd like you to join ${kitchenName} — it's where we keep all our family recipes. Tap the link to join.`
-  const emailBody = `I'd like you to join ${kitchenName} on Recipe Box — a shared collection of our family recipes.\n\nClick the link below to join:\n${joinUrl}`
+  const shareText = `I'd like you to join ${kitchenName}. It's where we keep all our family recipes. Tap the link to join.`
+  const emailBody = `I'd like you to join ${kitchenName} on Recipe Box, a shared collection of our family recipes.\n\nClick the link below to join:\n${joinUrl}`
 
   async function handleShare() {
     if (navigator.share) {

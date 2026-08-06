@@ -92,8 +92,9 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (recipeError || !cloned) {
+    console.error('[discover/add] recipe insert failed:', recipeError)
     return NextResponse.json(
-      { error: "Couldn't save your recipe. Try again — and if you're still having trouble, tell us using the Feedback button." },
+      { error: "Couldn't save your recipe. Try again. If you're still having trouble, use the Feedback button." },
       { status: 500 }
     )
   }
@@ -103,9 +104,10 @@ export async function POST(request: NextRequest) {
       sourceIngredients.map((ing) => ({ ...ing, recipe_id: cloned.id }))
     )
     if (ingError) {
+      console.error('[discover/add] ingredient insert failed:', ingError)
       await serviceClient.from('recipes').delete().eq('id', cloned.id)
       return NextResponse.json(
-        { error: "Couldn't save your recipe. Try again — and if you're still having trouble, tell us using the Feedback button." },
+        { error: "Couldn't save your recipe. Try again. If you're still having trouble, use the Feedback button." },
         { status: 500 }
       )
     }
@@ -116,9 +118,10 @@ export async function POST(request: NextRequest) {
       sourceSteps.map((step) => ({ ...step, recipe_id: cloned.id }))
     )
     if (stepError) {
+      console.error('[discover/add] step insert failed:', stepError)
       await serviceClient.from('recipes').delete().eq('id', cloned.id)
       return NextResponse.json(
-        { error: "Couldn't save your recipe. Try again — and if you're still having trouble, tell us using the Feedback button." },
+        { error: "Couldn't save your recipe. Try again. If you're still having trouble, use the Feedback button." },
         { status: 500 }
       )
     }

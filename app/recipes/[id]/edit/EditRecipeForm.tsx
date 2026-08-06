@@ -82,7 +82,7 @@ export function EditRecipeForm({ recipe, ingredients, steps }: Props) {
       (ing) => ing.name.trim() && ing.amount !== '' && !Number.isFinite(Number(ing.amount))
     )
     if (badAmount) {
-      setError(`"${badAmount.amount}" is not a valid amount — use a number like 1, 0.5, or 2.25`)
+      setError(`"${badAmount.amount}" is not a valid amount. Use a number like 1, 0.5, or 2.25.`)
       return
     }
 

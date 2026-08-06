@@ -48,7 +48,7 @@ export async function DELETE(
 
   if (error) {
     console.error('[DELETE /api/recipes/[id]] delete failed:', error)
-    return NextResponse.json({ error: 'Couldn\'t delete the recipe. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
+    return NextResponse.json({ error: 'Couldn\'t delete the recipe. Try again. If you\'re still having trouble, use the Feedback button.' }, { status: 500 })
   }
 
   return new NextResponse(null, { status: 204 })
@@ -107,7 +107,7 @@ export async function PATCH(
         return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
       }
       console.error('[PATCH /api/recipes/[id]] archive update failed:', error)
-      return NextResponse.json({ error: 'Couldn\'t save your changes. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
+      return NextResponse.json({ error: 'Couldn\'t save your changes. Try again. If you\'re still having trouble, use the Feedback button.' }, { status: 500 })
     }
 
     return NextResponse.json(data)
@@ -164,7 +164,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
     }
     console.error('[PATCH /api/recipes/[id]] recipe update failed:', recipeError)
-    return NextResponse.json({ error: 'Couldn\'t save your changes. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
+    return NextResponse.json({ error: 'Couldn\'t save your changes. Try again. If you\'re still having trouble, use the Feedback button.' }, { status: 500 })
   }
 
   if (!updated) {
@@ -180,7 +180,7 @@ export async function PATCH(
 
   if (ingredientsDelete.error || stepsDelete.error) {
     console.error('[PATCH /api/recipes/[id]] delete failed:', ingredientsDelete.error ?? stepsDelete.error)
-    return NextResponse.json({ error: 'Couldn\'t save your changes. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
+    return NextResponse.json({ error: 'Couldn\'t save your changes. Try again. If you\'re still having trouble, use the Feedback button.' }, { status: 500 })
   }
   if (microstepsDelete.error) {
     console.error('Failed to clear microstep cache:', microstepsDelete.error.message)
@@ -198,7 +198,7 @@ export async function PATCH(
     )
     if (ingredientsError) {
       console.error('[PATCH /api/recipes/[id]] ingredient insert failed:', ingredientsError)
-      return NextResponse.json({ error: 'Couldn\'t save your changes. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
+      return NextResponse.json({ error: 'Couldn\'t save your changes. Try again. If you\'re still having trouble, use the Feedback button.' }, { status: 500 })
     }
   }
 
@@ -212,7 +212,7 @@ export async function PATCH(
     )
     if (stepsError) {
       console.error('[PATCH /api/recipes/[id]] step insert failed:', stepsError)
-      return NextResponse.json({ error: 'Couldn\'t save your changes. Try again — and if you\'re still having trouble, tell us using the Feedback button.' }, { status: 500 })
+      return NextResponse.json({ error: 'Couldn\'t save your changes. Try again. If you\'re still having trouble, use the Feedback button.' }, { status: 500 })
     }
   }
 

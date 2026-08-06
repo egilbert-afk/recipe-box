@@ -202,7 +202,7 @@ function AddRecipePageContent() {
         // Vercel 413 HTML error page when the payload is too large, but also a
         // truncated body from a network drop. Use the status code to distinguish.
         if (res.status === 413) {
-          setUploadError('Images are too large — try using fewer photos.')
+          setUploadError('Images are too large. Try using fewer photos.')
         } else {
           setUploadError('Something went wrong reading the photo. Try again.')
         }
@@ -387,7 +387,7 @@ function AddRecipePageContent() {
             </button>
             {fetching && (
               <p className="text-sm text-gray-500 text-center">
-                Reading your recipe — this takes about 10 seconds.
+                Reading your recipe. This takes about 10 seconds.
               </p>
             )}
           </div>
@@ -455,7 +455,7 @@ function AddRecipePageContent() {
 
             {uploading && (
               <p className="text-sm text-gray-500 text-center">
-                Reading your recipe — this takes about 10 seconds.
+                Reading your recipe. This takes about 10 seconds.
               </p>
             )}
           </div>
@@ -472,7 +472,7 @@ function AddRecipePageContent() {
             <textarea
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              placeholder="Paste recipe text here — ingredients, steps, anything you've copied..."
+              placeholder="Paste recipe text here: ingredients, steps, anything you've copied..."
               rows={6}
               className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base resize-none"
             />
@@ -487,7 +487,7 @@ function AddRecipePageContent() {
             </button>
             {uploading && (
               <p className="text-sm text-gray-500 text-center">
-                Reading your recipe — this takes about 10 seconds.
+                Reading your recipe. This takes about 10 seconds.
               </p>
             )}
           </div>
