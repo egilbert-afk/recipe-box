@@ -133,37 +133,43 @@ export default function DiscoverPage() {
         </header>
 
         {/* Filter chips — meal type */}
-        <div className="px-4 pt-4 pb-2 flex flex-wrap gap-2">
-          {MEAL_TYPES.map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => toggleMealType(id)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                activeMealType === id
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white text-gray-700 border-gray-300'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="px-4 pt-4 pb-3">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Meal type</p>
+          <div className="flex flex-wrap gap-2">
+            {MEAL_TYPES.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => toggleMealType(id)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                  activeMealType === id
+                    ? 'bg-black text-white border-black'
+                    : 'bg-white text-gray-700 border-gray-300'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Filter chips — cuisine */}
-        <div className="px-4 pb-4 flex flex-wrap gap-2">
-          {CUISINES.map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => toggleCuisine(id)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                activeCuisine === id
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white text-gray-700 border-gray-300'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="px-4 pb-4">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Cuisine</p>
+          <div className="flex flex-wrap gap-2">
+            {CUISINES.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => toggleCuisine(id)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                  activeCuisine === id
+                    ? 'bg-black text-white border-black'
+                    : 'bg-white text-gray-700 border-gray-300'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Content area */}
@@ -245,7 +251,15 @@ export default function DiscoverPage() {
                     ))}
                     {card.ingredients.length > 8 && (
                       <li className="text-gray-400 text-xs">
-                        + {card.ingredients.length - 8} more — see the full recipe
+                        +{card.ingredients.length - 8} more —{' '}
+                        <a
+                          href={card.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:text-gray-600"
+                        >
+                          see the full recipe
+                        </a>
                       </li>
                     )}
                   </ul>
@@ -269,13 +283,23 @@ export default function DiscoverPage() {
                 >
                   {actionLoading ? 'Saving…' : 'Add to My Recipes'}
                 </button>
-                <button
-                  onClick={handleDismiss}
-                  disabled={actionLoading}
-                  className="flex items-center justify-center w-full h-10 text-sm text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
-                >
-                  Not for us
-                </button>
+                <div className="flex items-center justify-center gap-6 pt-1">
+                  <button
+                    onClick={() => fetchCard(activeCuisine, activeMealType)}
+                    disabled={actionLoading}
+                    className="text-sm text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+                  >
+                    Skip for now
+                  </button>
+                  <span className="text-gray-200">|</span>
+                  <button
+                    onClick={handleDismiss}
+                    disabled={actionLoading}
+                    className="text-sm text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+                  >
+                    Not for us
+                  </button>
+                </div>
               </div>
             </div>
           )}
