@@ -89,6 +89,24 @@ describe('middleware — authenticated user without household', () => {
   })
 })
 
+describe('middleware — membership lookup fails', () => {
+  it('logs the error and still redirects to /onboarding instead of failing silently', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } } })
+    mockMaybeSingle.mockResolvedValue({ data: null, error: { message: 'more than one row returned' } })
+
+    const res = await middleware(makeRequest('/recipes'))
+
+    expect(res.status).toBe(307)
+    expect(res.headers.get('location')).toBe('http://localhost/onboarding')
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[middleware] household membership lookup failed:',
+      { message: 'more than one row returned' }
+    )
+    consoleSpy.mockRestore()
+  })
+})
+
 describe('middleware — unauthenticated user', () => {
   it('redirects to /login when accessing a protected route', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })

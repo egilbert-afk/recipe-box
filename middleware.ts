@@ -47,11 +47,19 @@ export async function middleware(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    const { data: membership } = await serviceClient
+    const { data: membership, error: membershipError } = await serviceClient
       .from('household_members')
       .select('household_id')
       .eq('user_id', user.id)
       .maybeSingle()
+
+    // A failed lookup falls through to the same onboarding redirect as "no household
+    // yet" — /onboarding's own checks handle and log the failure from there. The
+    // logging here just makes sure a lookup failure is never silently indistinguishable
+    // from a legitimately new user.
+    if (membershipError) {
+      console.error('[middleware] household membership lookup failed:', membershipError)
+    }
 
     if (!membership) {
       const url = request.nextUrl.clone()

@@ -1,7 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { trackEvent } from '@/lib/events'
+
+// Logs an onboarding failure without adding latency to the error response.
+// `after()` runs once the response has been sent, but the platform keeps the
+// function alive until it finishes — unlike plain fire-and-forget, the write
+// isn't at risk of being dropped when the function freezes right after return.
+function logHouseholdCreationFailure(userId: string, properties: Record<string, unknown>) {
+  after(() =>
+    trackEvent(userId, null, 'household_creation_failed', properties).catch(err =>
+      console.error('[POST /api/households] trackEvent failed:', err)
+    )
+  )
+}
 
 export async function POST(request: NextRequest) {
   const serverClient = await createSupabaseServerClient()
@@ -24,12 +36,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Household name must be 100 characters or fewer' }, { status: 400 })
   }
 
-  // A user may only belong to one household.
-  const { data: existing } = await supabase
+  // A user may only belong to one household. A failed check must not be treated
+  // the same as "no household" — that silently lets a broken account keep
+  // retrying and creating orphaned rows instead of surfacing the failure.
+  const { data: existing, error: existingError } = await supabase
     .from('household_members')
     .select('household_id')
     .eq('user_id', user.id)
     .maybeSingle()
+
+  if (existingError) {
+    console.error('[POST /api/households] membership check failed:', existingError)
+    logHouseholdCreationFailure(user.id, { stage: 'membership_check', error: existingError.message })
+    return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
+  }
 
   if (existing) {
     return NextResponse.json({ error: 'You already belong to a household' }, { status: 409 })
@@ -43,6 +63,7 @@ export async function POST(request: NextRequest) {
 
   if (householdError) {
     console.error('[POST /api/households] household insert failed:', householdError)
+    logHouseholdCreationFailure(user.id, { stage: 'household_insert', error: householdError.message })
     return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
   }
 
@@ -52,7 +73,24 @@ export async function POST(request: NextRequest) {
 
   if (memberError) {
     console.error('[POST /api/households] member insert failed:', memberError)
-    await supabase.from('households').delete().eq('id', household.id)
+    const { error: rollbackError } = await supabase.from('households').delete().eq('id', household.id)
+    if (rollbackError) {
+      console.error('[POST /api/households] rollback delete also failed — orphaned household:', household.id, rollbackError)
+    }
+    logHouseholdCreationFailure(user.id, {
+      stage: 'member_insert',
+      error: memberError.message,
+      rollback_failed: !!rollbackError,
+      household_id: household.id,
+    })
+
+    // A unique_violation on user_id means a concurrent request already made this
+    // user a member of another household — the race the DB constraint exists to
+    // catch. Report it as the same "already belong to a household" case, not a
+    // generic failure.
+    if (memberError.code === '23505') {
+      return NextResponse.json({ error: 'You already belong to a household' }, { status: 409 })
+    }
     return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
   }
 
