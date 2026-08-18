@@ -6,6 +6,15 @@ import { POST as regenerateInvite } from '@/app/api/households/invite/route'
 
 // ── mocks ─────────────────────────────────────────────────────────────────────
 
+// after() requires a real Next.js request-handling context that route handlers
+// called directly in a unit test don't have. Run the callback immediately —
+// tests only care that the right event and properties were logged, not the
+// scheduling behavior itself.
+vi.mock('next/server', async importOriginal => {
+  const actual = await importOriginal<typeof import('next/server')>()
+  return { ...actual, after: (fn: () => void | Promise<void>) => fn() }
+})
+
 vi.mock('@/lib/supabase', () => ({
   supabase: { from: vi.fn() },
 }))
@@ -138,6 +147,36 @@ describe('POST /api/households', () => {
     )
   })
 
+  it('returns 409 instead of 500 when the member insert loses a concurrent-create race', async () => {
+    authAs('user-1')
+    const fakeHousehold = { id: 'hh-new', name: 'The Gilberts', plan: 'free', is_beta: false }
+
+    let callCount = 0
+    mockFrom.mockImplementation(() => {
+      callCount++
+      const chain: Record<string, unknown> = {}
+      const methods = ['select', 'insert', 'update', 'delete', 'eq', 'single', 'maybeSingle']
+      for (const m of methods) chain[m] = vi.fn().mockReturnValue(chain)
+
+      if (callCount === 1) {
+        ;(chain.maybeSingle as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null, error: null })
+      } else if (callCount === 2) {
+        ;(chain.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: fakeHousehold, error: null })
+      } else if (callCount === 3) {
+        // A second near-simultaneous request already claimed this user_id first —
+        // the UNIQUE(user_id) constraint rejects this insert as a duplicate.
+        chain.insert = vi.fn().mockResolvedValue({ error: { code: '23505', message: 'duplicate key value violates unique constraint' } })
+      } else {
+        ;(chain.eq as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null, error: null })
+      }
+      return chain as never
+    })
+
+    const res = await createHousehold(makeRequest({ name: 'The Gilberts' }))
+    expect(res.status).toBe(409)
+    expect(await res.json()).toMatchObject({ error: 'You already belong to a household' })
+  })
+
   it('creates a household and returns 201', async () => {
     authAs('user-1')
     const fakeHousehold = { id: 'hh-new', name: 'The Gilberts', plan: 'free', is_beta: false }
@@ -245,6 +284,29 @@ describe('POST /api/households/join', () => {
       'household_join_failed',
       expect.objectContaining({ stage: 'member_insert' })
     )
+  })
+
+  it('returns 409 instead of 500 when the member insert loses a concurrent-join race', async () => {
+    authAs('user-2')
+    const fakeHousehold = { id: 'hh-1', name: 'Gilbert Household', plan: 'free', is_beta: true }
+    let callCount = 0
+    mockFrom.mockImplementation(() => {
+      callCount++
+      const chain: Record<string, unknown> = {}
+      const methods = ['select', 'insert', 'eq', 'single', 'maybeSingle']
+      for (const m of methods) chain[m] = vi.fn().mockReturnValue(chain)
+      if (callCount === 1) {
+        ;(chain.maybeSingle as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null, error: null })
+      } else if (callCount === 2) {
+        ;(chain.maybeSingle as ReturnType<typeof vi.fn>).mockResolvedValue({ data: fakeHousehold, error: null })
+      } else {
+        chain.insert = vi.fn().mockResolvedValue({ error: { code: '23505', message: 'duplicate key value violates unique constraint' } })
+      }
+      return chain as never
+    })
+    const res = await joinHousehold(makeRequest({ invite_code: 'ABC12345' }))
+    expect(res.status).toBe(409)
+    expect(await res.json()).toMatchObject({ error: 'You already belong to a household' })
   })
 
   it('joins a household and returns 200', async () => {

@@ -252,6 +252,17 @@ await trackEvent(userId, householdId, 'event_name', props)
 
 Existing `await trackEvent(...)` calls throughout the codebase are a Known Issue — convert them during the next polish pass. This rule applies to all new code written from here forward.
 
+**Exception — failure logging that must not be silently dropped.** Plain fire-and-forget (`.catch()` with no `await`) risks the write never completing if the function is frozen right after the response is sent, which defeats the point of logging a failure. Use `after()` from `next/server` instead: it runs after the response is sent (no added latency, same as fire-and-forget) but the platform keeps the function alive until it finishes (unlike fire-and-forget, the write isn't at risk of being dropped). See `logHouseholdCreationFailure()` in `app/api/households/route.ts` for the pattern.
+
+```ts
+// Correct for failures worth guaranteeing — after() instead of a bare .catch():
+after(() =>
+  trackEvent(userId, householdId, 'event_name', props).catch(err =>
+    console.error('[route] trackEvent failed:', err)
+  )
+)
+```
+
 ### Rate limiting
 
 Any endpoint that creates or joins shared resources — household creation, invite code join, share link actions — must have rate limiting before real users arrive. This is a pre-launch requirement, not a post-launch cleanup. Add it from the start on new endpoints of this type, not as a Known Issue to revisit later.

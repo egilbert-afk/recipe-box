@@ -1,7 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { trackEvent } from '@/lib/events'
+
+// Logs an onboarding failure without adding latency to the error response.
+// `after()` runs once the response has been sent, but the platform keeps the
+// function alive until it finishes — unlike plain fire-and-forget, the write
+// isn't at risk of being dropped when the function freezes right after return.
+function logHouseholdCreationFailure(userId: string, properties: Record<string, unknown>) {
+  after(() =>
+    trackEvent(userId, null, 'household_creation_failed', properties).catch(err =>
+      console.error('[POST /api/households] trackEvent failed:', err)
+    )
+  )
+}
 
 export async function POST(request: NextRequest) {
   const serverClient = await createSupabaseServerClient()
@@ -35,12 +47,7 @@ export async function POST(request: NextRequest) {
 
   if (existingError) {
     console.error('[POST /api/households] membership check failed:', existingError)
-    // Awaited deliberately (unlike the fire-and-forget rule for the success path) —
-    // this is the only record of an onboarding failure once Vercel logs expire,
-    // so it must finish writing before the function is frozen.
-    await trackEvent(user.id, null, 'household_creation_failed', { stage: 'membership_check', error: existingError.message }).catch(err =>
-      console.error('[POST /api/households] trackEvent failed:', err)
-    )
+    logHouseholdCreationFailure(user.id, { stage: 'membership_check', error: existingError.message })
     return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
   }
 
@@ -56,9 +63,7 @@ export async function POST(request: NextRequest) {
 
   if (householdError) {
     console.error('[POST /api/households] household insert failed:', householdError)
-    await trackEvent(user.id, null, 'household_creation_failed', { stage: 'household_insert', error: householdError.message }).catch(err =>
-      console.error('[POST /api/households] trackEvent failed:', err)
-    )
+    logHouseholdCreationFailure(user.id, { stage: 'household_insert', error: householdError.message })
     return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
   }
 
@@ -72,12 +77,20 @@ export async function POST(request: NextRequest) {
     if (rollbackError) {
       console.error('[POST /api/households] rollback delete also failed — orphaned household:', household.id, rollbackError)
     }
-    await trackEvent(user.id, null, 'household_creation_failed', {
+    logHouseholdCreationFailure(user.id, {
       stage: 'member_insert',
       error: memberError.message,
       rollback_failed: !!rollbackError,
       household_id: household.id,
-    }).catch(err => console.error('[POST /api/households] trackEvent failed:', err))
+    })
+
+    // A unique_violation on user_id means a concurrent request already made this
+    // user a member of another household — the race the DB constraint exists to
+    // catch. Report it as the same "already belong to a household" case, not a
+    // generic failure.
+    if (memberError.code === '23505') {
+      return NextResponse.json({ error: 'You already belong to a household' }, { status: 409 })
+    }
     return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
   }
 
