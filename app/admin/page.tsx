@@ -33,6 +33,8 @@ const EVENT_LABEL: Record<string, string> = {
   recipe_saved_from_share: 'Recipe saved from share',
   signup_from_share: 'Signup from share',
   discover_dismissed: 'Discover dismissed',
+  household_creation_failed: 'Kitchen creation failed',
+  household_join_failed: 'Kitchen join failed',
 }
 
 export default async function AdminPage() {

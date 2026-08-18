@@ -26,6 +26,12 @@ export function OnboardingForm({ initialCode, saveToken }: { initialCode?: strin
         body: JSON.stringify({ name: name.trim() || 'My Kitchen' }),
       })
       if (!res.ok) {
+        // Already set up (e.g. a slow first request actually succeeded) — send them
+        // on instead of dead-ending on an error they can't do anything about.
+        if (res.status === 409) {
+          window.location.href = afterSetup
+          return
+        }
         const data = await res.json().catch(() => ({}))
         setError(data.error ?? 'Something went wrong. Please try again.')
         return
@@ -43,6 +49,10 @@ export function OnboardingForm({ initialCode, saveToken }: { initialCode?: strin
         body: JSON.stringify({ invite_code: code.trim() }),
       })
       if (!res.ok) {
+        if (res.status === 409) {
+          window.location.href = afterSetup
+          return
+        }
         const data = await res.json().catch(() => ({}))
         setError(data.error ?? 'Something went wrong. Please try again.')
         return
@@ -73,6 +83,9 @@ export function OnboardingForm({ initialCode, saveToken }: { initialCode?: strin
             >
               {isPending ? 'Trying again…' : 'Try again'}
             </button>
+            <a href="/onboarding" className="block text-sm text-gray-500 underline">
+              Set up a kitchen manually instead
+            </a>
           </div>
         ) : (
           <p className="text-gray-500 text-sm">Getting you set up…</p>

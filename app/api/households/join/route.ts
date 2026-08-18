@@ -21,12 +21,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invite code is required' }, { status: 400 })
   }
 
-  // A user may only belong to one household.
-  const { data: existing } = await supabase
+  // A user may only belong to one household. A failed check must not be treated
+  // the same as "no household" — see the same check in POST /api/households.
+  const { data: existing, error: existingError } = await supabase
     .from('household_members')
     .select('household_id')
     .eq('user_id', user.id)
     .maybeSingle()
+
+  if (existingError) {
+    console.error('[POST /api/households/join] membership check failed:', existingError)
+    await trackEvent(user.id, null, 'household_join_failed', { stage: 'membership_check', error: existingError.message }).catch(err =>
+      console.error('[POST /api/households/join] trackEvent failed:', err)
+    )
+    return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
+  }
 
   if (existing) {
     return NextResponse.json({ error: 'You already belong to a household' }, { status: 409 })
@@ -48,6 +57,9 @@ export async function POST(request: NextRequest) {
 
   if (memberError) {
     console.error('[POST /api/households/join] member insert failed:', memberError)
+    await trackEvent(user.id, household.id, 'household_join_failed', { stage: 'member_insert', error: memberError.message }).catch(err =>
+      console.error('[POST /api/households/join] trackEvent failed:', err)
+    )
     return NextResponse.json({ error: 'Something went wrong on our end. Tell us what happened using the Feedback button.' }, { status: 500 })
   }
 

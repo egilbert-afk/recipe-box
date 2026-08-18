@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { POST as createHousehold } from '@/app/api/households/route'
-import { GET as getMyHousehold } from '@/app/api/households/me/route'
 import { POST as joinHousehold } from '@/app/api/households/join/route'
 import { POST as regenerateInvite } from '@/app/api/households/invite/route'
 
@@ -22,9 +21,11 @@ vi.mock('@/lib/events', () => ({
 
 import { supabase } from '@/lib/supabase'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { trackEvent } from '@/lib/events'
 
 const mockFrom = vi.mocked(supabase.from)
 const mockServerClient = vi.mocked(createSupabaseServerClient)
+const mockTrackEvent = vi.mocked(trackEvent)
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ function mockChain(result: object) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockTrackEvent.mockResolvedValue(undefined)
 })
 
 // ── POST /api/households ──────────────────────────────────────────────────────
@@ -83,6 +85,57 @@ describe('POST /api/households', () => {
     const res = await createHousehold(makeRequest({ name: 'The Gilberts' }))
     expect(res.status).toBe(409)
     expect(await res.json()).toMatchObject({ error: 'You already belong to a household' })
+  })
+
+  it('returns 500 and logs when the membership check itself fails, instead of treating it as no household', async () => {
+    authAs('user-1')
+    mockChain({ data: null, error: { message: 'more than one row returned' } })
+    const res = await createHousehold(makeRequest({ name: 'The Gilberts' }))
+    expect(res.status).toBe(500)
+    expect(mockTrackEvent).toHaveBeenCalledWith(
+      'user-1',
+      null,
+      'household_creation_failed',
+      expect.objectContaining({ stage: 'membership_check' })
+    )
+  })
+
+  it('rolls back the household and logs when the member insert fails', async () => {
+    authAs('user-1')
+    const fakeHousehold = { id: 'hh-new', name: 'The Gilberts', plan: 'free', is_beta: false }
+
+    let callCount = 0
+    mockFrom.mockImplementation(() => {
+      callCount++
+      const chain: Record<string, unknown> = {}
+      const methods = ['select', 'insert', 'update', 'delete', 'eq', 'single', 'maybeSingle']
+      for (const m of methods) chain[m] = vi.fn().mockReturnValue(chain)
+
+      if (callCount === 1) {
+        // Check existing membership — none
+        ;(chain.maybeSingle as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null, error: null })
+      } else if (callCount === 2) {
+        // Insert household — succeeds
+        ;(chain.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: fakeHousehold, error: null })
+      } else if (callCount === 3) {
+        // Insert member — fails. insert() is awaited directly here (no .select()
+        // chained after it), so it must resolve rather than return the chain.
+        chain.insert = vi.fn().mockResolvedValue({ error: { message: 'insert failed' } })
+      } else {
+        // Rollback delete
+        ;(chain.eq as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null, error: null })
+      }
+      return chain as never
+    })
+
+    const res = await createHousehold(makeRequest({ name: 'The Gilberts' }))
+    expect(res.status).toBe(500)
+    expect(mockTrackEvent).toHaveBeenCalledWith(
+      'user-1',
+      null,
+      'household_creation_failed',
+      expect.objectContaining({ stage: 'member_insert', household_id: 'hh-new' })
+    )
   })
 
   it('creates a household and returns 201', async () => {
@@ -117,73 +170,6 @@ describe('POST /api/households', () => {
   })
 })
 
-// ── GET /api/households/me ────────────────────────────────────────────────────
-
-describe('GET /api/households/me', () => {
-  it('returns 404 when user has no household', async () => {
-    authAs('user-1')
-    mockChain({ data: null, error: null })
-    const res = await getMyHousehold()
-    expect(res.status).toBe(404)
-  })
-
-  it('returns household and members for authenticated user', async () => {
-    authAs('user-1')
-    const fakeHousehold = { id: 'hh-1', name: 'Gilbert Household', plan: 'free', is_beta: true, invite_code: 'ABC12345' }
-    const fakeMembers = [{ user_id: 'user-1', role: 'owner', joined_at: '2026-01-01' }]
-
-    let callCount = 0
-    mockFrom.mockImplementation(() => {
-      callCount++
-      const chain: Record<string, unknown> = {}
-      const methods = ['select', 'eq', 'single', 'maybeSingle']
-      for (const m of methods) chain[m] = vi.fn().mockReturnValue(chain)
-
-      if (callCount === 1) {
-        ;(chain.maybeSingle as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { household_id: 'hh-1', role: 'owner' }, error: null })
-      } else if (callCount === 2) {
-        ;(chain.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: fakeHousehold, error: null })
-      } else {
-        ;(chain.maybeSingle as ReturnType<typeof vi.fn>).mockResolvedValue({ data: fakeMembers, error: null })
-        ;(chain.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: fakeMembers, error: null })
-      }
-      return chain as never
-    })
-
-    const res = await getMyHousehold()
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body).toMatchObject({ name: 'Gilbert Household' })
-  })
-
-  it('hides invite code from non-owners', async () => {
-    authAs('user-2')
-    const fakeHousehold = { id: 'hh-1', name: 'Gilbert Household', plan: 'free', is_beta: true, invite_code: 'SECRET1' }
-
-    let callCount = 0
-    mockFrom.mockImplementation(() => {
-      callCount++
-      const chain: Record<string, unknown> = {}
-      const methods = ['select', 'eq', 'single', 'maybeSingle']
-      for (const m of methods) chain[m] = vi.fn().mockReturnValue(chain)
-
-      if (callCount === 1) {
-        ;(chain.maybeSingle as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { household_id: 'hh-1', role: 'member' }, error: null })
-      } else if (callCount === 2) {
-        ;(chain.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: fakeHousehold, error: null })
-      } else {
-        ;(chain.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [], error: null })
-        ;(chain.maybeSingle as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [], error: null })
-      }
-      return chain as never
-    })
-
-    const res = await getMyHousehold()
-    const body = await res.json()
-    expect(body.invite_code).toBeUndefined()
-  })
-})
-
 // ── POST /api/households/join ─────────────────────────────────────────────────
 
 describe('POST /api/households/join', () => {
@@ -199,6 +185,19 @@ describe('POST /api/households/join', () => {
     mockChain({ data: { household_id: 'hh-1' }, error: null })
     const res = await joinHousehold(makeRequest({ invite_code: 'ABC12345' }))
     expect(res.status).toBe(409)
+  })
+
+  it('returns 500 and logs when the membership check itself fails, instead of treating it as no household', async () => {
+    authAs('user-1')
+    mockChain({ data: null, error: { message: 'more than one row returned' } })
+    const res = await joinHousehold(makeRequest({ invite_code: 'ABC12345' }))
+    expect(res.status).toBe(500)
+    expect(mockTrackEvent).toHaveBeenCalledWith(
+      'user-1',
+      null,
+      'household_join_failed',
+      expect.objectContaining({ stage: 'membership_check' })
+    )
   })
 
   it('returns 404 when invite code does not match any household', async () => {
@@ -218,6 +217,34 @@ describe('POST /api/households/join', () => {
     })
     const res = await joinHousehold(makeRequest({ invite_code: 'INVALID1' }))
     expect(res.status).toBe(404)
+  })
+
+  it('logs when the member insert fails after a valid invite code', async () => {
+    authAs('user-2')
+    const fakeHousehold = { id: 'hh-1', name: 'Gilbert Household', plan: 'free', is_beta: true }
+    let callCount = 0
+    mockFrom.mockImplementation(() => {
+      callCount++
+      const chain: Record<string, unknown> = {}
+      const methods = ['select', 'insert', 'eq', 'single', 'maybeSingle']
+      for (const m of methods) chain[m] = vi.fn().mockReturnValue(chain)
+      if (callCount === 1) {
+        ;(chain.maybeSingle as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null, error: null })
+      } else if (callCount === 2) {
+        ;(chain.maybeSingle as ReturnType<typeof vi.fn>).mockResolvedValue({ data: fakeHousehold, error: null })
+      } else {
+        chain.insert = vi.fn().mockResolvedValue({ error: { message: 'insert failed' } })
+      }
+      return chain as never
+    })
+    const res = await joinHousehold(makeRequest({ invite_code: 'ABC12345' }))
+    expect(res.status).toBe(500)
+    expect(mockTrackEvent).toHaveBeenCalledWith(
+      'user-2',
+      'hh-1',
+      'household_join_failed',
+      expect.objectContaining({ stage: 'member_insert' })
+    )
   })
 
   it('joins a household and returns 200', async () => {

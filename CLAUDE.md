@@ -223,6 +223,8 @@ USING (household_id IN (SELECT household_id FROM household_members WHERE user_id
 
 The service role client (`lib/supabase.ts`) bypasses RLS entirely. API routes that use it must filter by `household_id` themselves — never rely on RLS to scope data for service role queries.
 
+**Always check the `error` from `.single()` / `.maybeSingle()`, never just destructure `data`.** Both return a Postgres error (not just `data: null`) when a query unexpectedly matches more than one row — `maybeSingle()` expects 0 or 1 rows, `single()` expects exactly 1. Code that does `const { data } = await supabase.from(...).maybeSingle()` and only checks `if (!data)` treats that error the same as "no rows found," silently swallowing the failure. Found this gap in the household membership checks (`/api/households`, `/api/households/join`, `middleware.ts`): nothing stopped a race (double-click, duplicate tab, retried request) from giving one user two `household_members` rows, and if it ever happened, every check afterward would have silently misread the resulting error as "no household yet" instead of failing loud. No evidence this ever actually occurred in production data, but it was a real, unguarded gap — fixed by adding `UNIQUE (user_id)` on `household_members` and checking `error` explicitly at every call site. Always destructure and check `error`, not just `data`.
+
 ### Household auth patterns
 
 Every API route that touches household-scoped data must:
