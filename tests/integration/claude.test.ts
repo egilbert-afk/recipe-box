@@ -65,6 +65,35 @@ describe('parseRecipeFromUrl', () => {
     expect(sentContent).toContain('Page description: 120K Likes - chef on Instagram: "My favorite quick pasta"')
   })
 
+  it('does not let a decoy data-content attribute win over the real content attribute', async () => {
+    mockFetchOk('<html><head><meta property="og:title" content="Right Title" data-content="wrong"></head></html>')
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify(validClaudeResponse) }],
+    })
+
+    await parseRecipeFromUrl('https://example.com')
+
+    const sentContent = mockCreate.mock.calls[0][0].messages[0].content
+    expect(sentContent).toContain('Page title: Right Title')
+    expect(sentContent).not.toContain('wrong')
+  })
+
+  it('surfaces the manual-entry fallback instead of hallucinating when the page is a login wall', async () => {
+    // A blocked/login-wall shell still serves its own generic og tags — Claude is instructed
+    // to signal not_a_recipe rather than invent a plausible-looking recipe from that copy.
+    mockFetchOk(
+      '<html><head>' +
+      '<meta property="og:title" content="Instagram">' +
+      '<meta property="og:description" content="Welcome back to Instagram. Sign in to see photos and videos.">' +
+      '</head><body></body></html>'
+    )
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify({ not_a_recipe: true }) }],
+    })
+
+    await expect(parseRecipeFromUrl('https://www.instagram.com/p/abc123/')).rejects.toThrow('incomplete recipe data')
+  })
+
   it('sends only the stripped body when no og tags are present', async () => {
     mockFetchOk('<html><p>Recipe content</p></html>')
     mockCreate.mockResolvedValueOnce({

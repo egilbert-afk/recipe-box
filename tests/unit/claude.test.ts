@@ -86,6 +86,22 @@ describe('extractOpenGraphContext', () => {
     const html = '<meta property="og:title" content="Garlic Pasta">'
     expect(extractOpenGraphContext(html)).toBe('Page title: Garlic Pasta')
   })
+
+  it('does not let a decoy attribute ending in "content=" win the match', () => {
+    const html = '<meta property="og:title" content="Right Title" data-content="wrong">'
+    expect(extractOpenGraphContext(html)).toBe('Page title: Right Title')
+  })
+
+  it('caps extracted content length instead of forwarding an unbounded value', () => {
+    const html = `<meta property="og:description" content="${'a'.repeat(5000)}">`
+    const result = extractOpenGraphContext(html)
+    expect(result.length).toBeLessThan(1100)
+  })
+
+  it('only searches the first part of the document, ignoring meta tags far past a reasonable head size', () => {
+    const farAway = ' '.repeat(200_000) + '<meta property="og:title" content="Too Far">'
+    expect(extractOpenGraphContext(farAway)).toBe('')
+  })
 })
 
 // ── parseRawRecipeJson ────────────────────────────────────────────────────────
@@ -104,6 +120,14 @@ function makeJson(overrides: object = {}) {
 }
 
 describe('parseRawRecipeJson', () => {
+  it('throws the incomplete-data error when Claude signals not_a_recipe', () => {
+    // Claude is instructed (SYSTEM_PROMPT) to return this sentinel instead of hallucinating a
+    // plausible-looking recipe from a login page or generic site copy — it must map to the same
+    // "please try manual entry" error as any other invalid shape, which is what already drives
+    // the auto-switch-to-paste UX in app/api/parse/route.ts.
+    expect(() => parseRawRecipeJson(JSON.stringify({ not_a_recipe: true }))).toThrow('incomplete recipe data')
+  })
+
   it('throws on malformed JSON', () => {
     expect(() => parseRawRecipeJson('not json')).toThrow('malformed JSON')
   })
