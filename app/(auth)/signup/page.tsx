@@ -1,4 +1,5 @@
 import { signUp } from '../actions'
+import { GoogleSignInButton } from '@/components/GoogleSignInButton'
 
 export default async function SignupPage({
   searchParams,
@@ -85,6 +86,8 @@ export default async function SignupPage({
                 Create account
               </button>
             </form>
+
+            <GoogleSignInButton code={code} save={save} />
 
             <p className="text-center text-sm text-gray-500">
               Already have an account?{' '}
