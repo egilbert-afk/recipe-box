@@ -46,6 +46,7 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
   const [microsteps, setMicrosteps] = useState<string[] | null>(null)
   const [microstepsLoading, setMicrostepsLoading] = useState(true)
   const [microstepsError, setMicrostepsError] = useState('')
+  const [regenerating, setRegenerating] = useState(false)
 
   // Voice state — only available when microsteps are loaded
   const [voiceEnabled, setVoiceEnabled] = useState(false)
@@ -93,6 +94,32 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
         if (!cancelled) setMicrostepsLoading(false)
       })
     return () => { cancelled = true }
+  }, [recipeId, targetServings])
+
+  // Regenerate microsteps, bypassing the cache — recovers from stale cached results
+  // after generation-quality improvements (see known issue on the Layer 5 cache)
+  const regenerateMicrosteps = useCallback(() => {
+    setRegenerating(true)
+    setMicrostepsError('')
+    fetch(`/api/recipes/${recipeId}/microsteps`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ servings: targetServings, regenerate: true }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.steps)) {
+          setMicrosteps(data.steps)
+        } else if (!data.gated) {
+          setMicrostepsError(data.error ?? 'Could not prepare microsteps')
+        }
+      })
+      .catch(() => {
+        setMicrostepsError('Could not prepare microsteps')
+      })
+      .finally(() => {
+        setRegenerating(false)
+      })
   }, [recipeId, targetServings])
 
   useEffect(() => {
@@ -376,6 +403,18 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
               : voiceStatus === 'listening' ? 'Listening…'
               : 'Voice On'
               : 'Enable Voice'}
+          </button>
+        )}
+
+        {/* Regenerate — bypasses the cache when steps read stale after a quality improvement */}
+        {microsteps && !microstepsLoading && (
+          <button
+            type="button"
+            onClick={regenerateMicrosteps}
+            disabled={regenerating}
+            className="w-full flex items-center justify-center h-10 text-sm font-medium text-gray-500 disabled:opacity-50"
+          >
+            {regenerating ? 'Regenerating…' : 'Regenerate steps'}
           </button>
         )}
       </div>

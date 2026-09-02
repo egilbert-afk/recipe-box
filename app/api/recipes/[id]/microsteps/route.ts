@@ -21,7 +21,7 @@ export async function POST(
 
   if (!membership) return NextResponse.json({ error: 'No household found' }, { status: 403 })
 
-  let body: { servings?: unknown }
+  let body: { servings?: unknown; regenerate?: unknown }
   try {
     body = await request.json()
   } catch {
@@ -32,6 +32,7 @@ export async function POST(
   if (typeof servings !== 'number' || !Number.isInteger(servings) || servings < 1 || servings > 20) {
     return NextResponse.json({ error: 'servings must be an integer between 1 and 20' }, { status: 400 })
   }
+  const regenerate = body.regenerate === true
 
   // Verify ownership before any cache access — prevents cross-household reads
   const { data: recipe } = await supabase
@@ -51,16 +52,19 @@ export async function POST(
     return NextResponse.json({ gated: true })
   }
 
-  // Return cached microsteps if available for this recipe+servings combination
-  const { data: cached } = await supabase
-    .from('recipe_microsteps')
-    .select('steps')
-    .eq('recipe_id', id)
-    .eq('servings', servings)
-    .maybeSingle()
+  // Return cached microsteps if available for this recipe+servings combination,
+  // unless the caller explicitly asked to regenerate (stale cache after logic improvements)
+  if (!regenerate) {
+    const { data: cached } = await supabase
+      .from('recipe_microsteps')
+      .select('steps')
+      .eq('recipe_id', id)
+      .eq('servings', servings)
+      .maybeSingle()
 
-  if (cached) {
-    return NextResponse.json({ steps: cached.steps })
+    if (cached) {
+      return NextResponse.json({ steps: cached.steps })
+    }
   }
 
   const [{ data: steps, error: stepsError }, { data: ingredients, error: ingredientsError }] = await Promise.all([
