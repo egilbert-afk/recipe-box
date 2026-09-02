@@ -280,17 +280,16 @@ Any endpoint that creates or joins shared resources — household creation, invi
 
 ---
 
-## Current focus — Layer 14: Discover
+## Current focus — Layer 15: Cook history and ratings UI
 
-Layers 1–13 are complete. The quality pass (voice/microstep polish, discoverability, blocked-site handling) is also complete. The current priority is building Discover — the community recipe pool feature.
+Layers 1–14 are complete, including Discover's follow-up fixes (error messaging/URL fallback, the `discover` capture_method constraint, and self-healing onboarding). The current priority is Layer 15.
 
-See the `### Discover` rules section above and the `## Discover` section in PRODUCT.md for full design decisions.
+See the `### Discover` rules section above and the `## Discover` section in PRODUCT.md for full design decisions on the now-complete Layer 14.
 
 **Upcoming layers**
 
 | Layer | What gets built |
 |-------|----------------|
-| 14 | Discover — community recipe pool, filter + one-card UX, creator-first outbound links, external fallback |
 | 15 | Cook history and ratings UI |
 | 16 | Meal planning and shopping list |
 | 17 | Stripe + subscription + free tier enforcement |
@@ -314,6 +313,7 @@ See the `### Discover` rules section above and the `## Discover` section in PROD
 | 11 | ✅ | In-app feedback button |
 | 12 | ✅ | UI polish — bottom nav, filter chips, recipe editing, personal notes, icon polish, settings page, recipe sharing |
 | 13 | ✅ | Implied prep steps — Claude surfaces mincing/chopping from ingredient lists |
+| 14 | ✅ | Discover — community recipe pool, filter + one-card UX, creator-first outbound links, external fallback |
 
 ---
 
