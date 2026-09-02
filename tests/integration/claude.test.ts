@@ -47,6 +47,37 @@ describe('parseRecipeFromUrl', () => {
     expect(result.steps).toHaveLength(1)
   })
 
+  it('prepends og:title/og:description to the content sent to Claude when present', async () => {
+    mockFetchOk(
+      '<html><head>' +
+      '<meta property="og:title" content="Grandma\'s Garlic Pasta">' +
+      '<meta property="og:description" content="120K Likes - chef on Instagram: &quot;My favorite quick pasta&quot;">' +
+      '</head><body>Log in to see more</body></html>'
+    )
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify(validClaudeResponse) }],
+    })
+
+    await parseRecipeFromUrl('https://www.instagram.com/p/abc123/')
+
+    const sentContent = mockCreate.mock.calls[0][0].messages[0].content
+    expect(sentContent).toContain("Page title: Grandma's Garlic Pasta")
+    expect(sentContent).toContain('Page description: 120K Likes - chef on Instagram: "My favorite quick pasta"')
+  })
+
+  it('sends only the stripped body when no og tags are present', async () => {
+    mockFetchOk('<html><p>Recipe content</p></html>')
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify(validClaudeResponse) }],
+    })
+
+    await parseRecipeFromUrl('https://example.com/recipe')
+
+    const sentContent = mockCreate.mock.calls[0][0].messages[0].content
+    expect(sentContent).not.toContain('Page title:')
+    expect(sentContent).not.toContain('Page description:')
+  })
+
   it('strips markdown fences if Claude includes them despite instructions', async () => {
     const withFences = '```json\n' + JSON.stringify(validClaudeResponse) + '\n```'
     mockCreate.mockResolvedValueOnce({
@@ -74,7 +105,7 @@ describe('parseRecipeFromUrl', () => {
       statusText: 'Internal Server Error',
     }))
 
-    await expect(parseRecipeFromUrl('https://example.com')).rejects.toThrow('Failed to fetch URL: 500')
+    await expect(parseRecipeFromUrl('https://example.com')).rejects.toThrow('Could not read that page')
   })
 
   it('throws when Claude returns malformed JSON', async () => {

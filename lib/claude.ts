@@ -92,6 +92,42 @@ export async function fetchUrl(url: string): Promise<string> {
   return res.text()
 }
 
+// Open Graph meta tags carry a page's title/description in an attribute, not in text between
+// tags — stripHtml (below) only keeps text between tags, so this content is otherwise silently
+// discarded. That matters most for pages like Instagram posts, where the caption is the entire
+// recipe and lives only in og:description; the rest of the initial HTML is an empty JS shell.
+function extractMetaContent(html: string, property: string): string | null {
+  const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  // Match against whichever quote character actually delimits the content value (via
+  // backreference) rather than excluding both quote characters — a title like
+  // `content="Grandma's Pasta"` is valid HTML and must not be cut short at the apostrophe.
+  const propFirst = new RegExp(`<meta[^>]*(?:property|name)=["']${escaped}["'][^>]*content=(["'])(.*?)\\1`, 'i')
+  const contentFirst = new RegExp(`<meta[^>]*content=(["'])(.*?)\\1[^>]*(?:property|name)=["']${escaped}["']`, 'i')
+  const match = html.match(propFirst) ?? html.match(contentFirst)
+  const raw = match?.[2]
+  if (!raw) return null
+  const decoded = raw
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim()
+  return decoded || null
+}
+
+// Pulls og:title/og:description ahead of the stripped body text. Harmless on ordinary recipe
+// sites (their body text already has everything); load-bearing on sites where the body is a JS
+// shell and the only real content is in these tags.
+export function extractOpenGraphContext(html: string): string {
+  const title = extractMetaContent(html, 'og:title')
+  const description = extractMetaContent(html, 'og:description')
+  const parts: string[] = []
+  if (title) parts.push(`Page title: ${title}`)
+  if (description) parts.push(`Page description: ${description}`)
+  return parts.join('\n')
+}
+
 // Strips HTML tags and collapses whitespace to reduce token count before
 // sending to Claude. Recipe sites have a lot of nav, ads, and boilerplate
 // that we don't need Claude to read.
@@ -208,13 +244,15 @@ function extractRecipeFromMessage(message: Anthropic.Message): CreateRecipeInput
 
 export async function parseRecipeFromUrl(url: string): Promise<CreateRecipeInput> {
   const html = await fetchUrl(url)
+  const ogContext = extractOpenGraphContext(html)
   const text = stripHtml(html)
+  const content = ogContext ? `${ogContext}\n\n${text}` : text
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: `Parse this recipe page into JSON:\n\n${text}` }],
+    messages: [{ role: 'user', content: `Parse this recipe page into JSON:\n\n${content}` }],
   })
 
   return { ...extractRecipeFromMessage(message), source_url: url }
