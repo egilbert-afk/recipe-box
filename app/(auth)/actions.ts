@@ -25,6 +25,30 @@ export async function signIn(formData: FormData) {
   redirect('/recipes')
 }
 
+export async function signInWithGoogle(formData: FormData) {
+  const code = sanitizeInviteCode(formData.get('code') as string | null)
+  const save = sanitizeShareToken(formData.get('save') as string | null)
+
+  const headersList = await headers()
+  const host = headersList.get('host') ?? 'localhost:3000'
+  const protocol = host.includes('localhost') ? 'http' : 'https'
+  const extraParam = code ? `&invite_code=${code}` : save ? `&save_token=${save}` : ''
+  const redirectTo = `${protocol}://${host}/auth/callback?type=oauth${extraParam}`
+
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo },
+  })
+
+  if (error || !data.url) {
+    const codeParam = code ? `&code=${code}` : save ? `&save=${save}` : ''
+    redirect(`/login?error=Could+not+start+Google+sign-in.+Please+try+again.${codeParam}`)
+  }
+
+  redirect(data.url)
+}
+
 export async function signUp(formData: FormData) {
   const email = (formData.get('email') as string) ?? ''
   const password = (formData.get('password') as string) ?? ''

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { signIn, signOut, signUp } from '@/app/(auth)/actions'
+import { signIn, signOut, signUp, signInWithGoogle } from '@/app/(auth)/actions'
 
 // redirect() throws internally in Next.js — we replicate that here so the
 // function under test stops executing at the redirect call, just as it would
@@ -10,9 +10,14 @@ vi.mock('next/navigation', () => ({
   }),
 }))
 
+vi.mock('next/headers', () => ({
+  headers: vi.fn(() => Promise.resolve(new Headers({ host: 'example.com' }))),
+}))
+
 const mockSignInWithPassword = vi.fn()
 const mockSignOut = vi.fn()
 const mockSignUp = vi.fn()
+const mockSignInWithOAuth = vi.fn()
 
 vi.mock('@/lib/supabase-server', () => ({
   createSupabaseServerClient: vi.fn(() =>
@@ -21,6 +26,7 @@ vi.mock('@/lib/supabase-server', () => ({
         signInWithPassword: mockSignInWithPassword,
         signOut: mockSignOut,
         signUp: mockSignUp,
+        signInWithOAuth: mockSignInWithOAuth,
       },
     })
   ),
@@ -69,6 +75,44 @@ describe('signIn', () => {
       email: 'chef@example.com',
       password: 'mypassword',
     })
+  })
+})
+
+describe('signInWithGoogle', () => {
+  it('redirects to the provider URL Supabase returns', async () => {
+    mockSignInWithOAuth.mockResolvedValue({ data: { url: 'https://accounts.google.com/o/oauth2/auth?foo=bar' }, error: null })
+
+    await expect(signInWithGoogle(makeFormData({}))).rejects.toThrow(
+      'REDIRECT:https://accounts.google.com/o/oauth2/auth?foo=bar'
+    )
+  })
+
+  it('requests the google provider with a callback redirectTo', async () => {
+    mockSignInWithOAuth.mockResolvedValue({ data: { url: 'https://accounts.google.com/authorize' }, error: null })
+
+    await expect(signInWithGoogle(makeFormData({}))).rejects.toThrow()
+
+    expect(mockSignInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: 'https://example.com/auth/callback?type=oauth' },
+    })
+  })
+
+  it('carries an invite code through to the callback redirectTo', async () => {
+    mockSignInWithOAuth.mockResolvedValue({ data: { url: 'https://accounts.google.com/authorize' }, error: null })
+
+    await expect(signInWithGoogle(makeFormData({ code: 'abcd1234' }))).rejects.toThrow()
+
+    expect(mockSignInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: 'https://example.com/auth/callback?type=oauth&invite_code=ABCD1234' },
+    })
+  })
+
+  it('redirects to /login with an error when Supabase fails to start the OAuth flow', async () => {
+    mockSignInWithOAuth.mockResolvedValue({ data: { url: null }, error: { message: 'provider not configured' } })
+
+    await expect(signInWithGoogle(makeFormData({}))).rejects.toThrow('REDIRECT:/login?error=')
   })
 })
 

@@ -4,13 +4,19 @@ import { GET } from '@/app/auth/callback/route'
 
 const mockExchangeCodeForSession = vi.fn()
 
-vi.mock('@/lib/supabase-server', () => ({
-  createSupabaseServerClient: vi.fn(() =>
-    Promise.resolve({
-      auth: { exchangeCodeForSession: mockExchangeCodeForSession },
-    })
-  ),
+vi.mock('@supabase/ssr', () => ({
+  createServerClient: vi.fn(() => ({
+    auth: { exchangeCodeForSession: mockExchangeCodeForSession },
+  })),
 }))
+
+vi.mock('@/lib/events', () => ({
+  trackEvent: vi.fn(),
+  VALID_EVENTS: [],
+}))
+
+import { trackEvent } from '@/lib/events'
+const mockTrackEvent = vi.mocked(trackEvent)
 
 function makeRequest(params: Record<string, string> = {}) {
   const url = new URL('http://localhost/auth/callback')
@@ -23,8 +29,8 @@ beforeEach(() => {
 })
 
 describe('GET /auth/callback', () => {
-  it('redirects to /recipes when code exchange succeeds', async () => {
-    mockExchangeCodeForSession.mockResolvedValue({ error: null })
+  it('redirects to /recipes when code exchange succeeds with no invite/save/recovery context', async () => {
+    mockExchangeCodeForSession.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
 
     const res = await GET(makeRequest({ code: 'valid-code' }))
 
@@ -37,27 +43,73 @@ describe('GET /auth/callback', () => {
 
     expect(res.status).toBe(307)
     expect(res.headers.get('location')).toBe(
-      'http://localhost/login?error=Authentication+failed'
+      'http://localhost/login?error=That+sign-in+link+has+expired.+Try+signing+in+again.'
     )
     expect(mockExchangeCodeForSession).not.toHaveBeenCalled()
   })
 
   it('redirects to /login?error when code exchange fails', async () => {
-    mockExchangeCodeForSession.mockResolvedValue({ error: { message: 'Token expired' } })
+    mockExchangeCodeForSession.mockResolvedValue({ data: { user: null }, error: { message: 'Token expired' } })
 
     const res = await GET(makeRequest({ code: 'expired-code' }))
 
     expect(res.status).toBe(307)
     expect(res.headers.get('location')).toBe(
-      'http://localhost/login?error=Authentication+failed'
+      'http://localhost/login?error=That+sign-in+link+has+expired.+Try+signing+in+again.'
     )
   })
 
   it('calls exchangeCodeForSession with the code from the URL', async () => {
-    mockExchangeCodeForSession.mockResolvedValue({ error: null })
+    mockExchangeCodeForSession.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
 
     await GET(makeRequest({ code: 'abc-xyz' }))
 
     expect(mockExchangeCodeForSession).toHaveBeenCalledWith('abc-xyz')
+  })
+
+  it('redirects to /reset-password when type is recovery', async () => {
+    mockExchangeCodeForSession.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
+
+    const res = await GET(makeRequest({ code: 'valid-code', type: 'recovery' }))
+
+    expect(res.headers.get('location')).toBe('http://localhost/reset-password')
+  })
+
+  it('redirects to /onboarding with the invite code when one is present', async () => {
+    mockExchangeCodeForSession.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
+
+    const res = await GET(makeRequest({ code: 'valid-code', invite_code: 'ABCD1234' }))
+
+    expect(res.headers.get('location')).toBe('http://localhost/onboarding?code=ABCD1234')
+  })
+
+  it('tracks account_created for a signup confirmation', async () => {
+    mockExchangeCodeForSession.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
+
+    await GET(makeRequest({ code: 'valid-code', type: 'signup' }))
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('user-1', null, 'account_created')
+  })
+
+  it('tracks account_created for a brand-new Google sign-in (first sign-in ever)', async () => {
+    mockExchangeCodeForSession.mockResolvedValue({
+      data: { user: { id: 'user-1', created_at: '2026-09-02T00:00:00Z', last_sign_in_at: '2026-09-02T00:00:00Z' } },
+      error: null,
+    })
+
+    await GET(makeRequest({ code: 'valid-code', type: 'oauth' }))
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('user-1', null, 'account_created')
+  })
+
+  it('does not track account_created for a returning Google sign-in', async () => {
+    mockExchangeCodeForSession.mockResolvedValue({
+      data: { user: { id: 'user-1', created_at: '2026-01-01T00:00:00Z', last_sign_in_at: '2026-09-02T00:00:00Z' } },
+      error: null,
+    })
+
+    await GET(makeRequest({ code: 'valid-code', type: 'oauth' }))
+
+    expect(mockTrackEvent).not.toHaveBeenCalled()
   })
 })

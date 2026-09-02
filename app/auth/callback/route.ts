@@ -43,7 +43,11 @@ export async function GET(request: NextRequest) {
 
     const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      if (type === 'signup' && sessionData.user) {
+      // Google (and any future OAuth provider) never hits our signUp() action, so there's
+      // no separate signup step to fire this from — created_at === last_sign_in_at only on
+      // the very first sign-in, which is how we tell a new OAuth account from a returning one.
+      const isNewOAuthUser = type === 'oauth' && sessionData.user?.created_at === sessionData.user?.last_sign_in_at
+      if ((type === 'signup' || isNewOAuthUser) && sessionData.user) {
         try {
           await trackEvent(sessionData.user.id, null, 'account_created')
           if (saveToken) await trackEvent(sessionData.user.id, null, 'signup_from_share')
