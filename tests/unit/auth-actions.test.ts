@@ -10,8 +10,11 @@ vi.mock('next/navigation', () => ({
   }),
 }))
 
-vi.mock('next/headers', () => ({
-  headers: vi.fn(() => Promise.resolve(new Headers({ host: 'example.com' }))),
+vi.mock('@/lib/auth-callback', () => ({
+  buildAuthCallbackUrl: vi.fn((type: string, params: Record<string, string> = {}) => {
+    const query = new URLSearchParams({ type, ...params })
+    return Promise.resolve(`https://example.com/auth/callback?${query.toString()}`)
+  }),
 }))
 
 const mockSignInWithPassword = vi.fn()

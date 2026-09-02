@@ -26,6 +26,7 @@ function makeRequest(params: Record<string, string> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockTrackEvent.mockResolvedValue(undefined)
 })
 
 describe('GET /auth/callback', () => {
@@ -111,5 +112,29 @@ describe('GET /auth/callback', () => {
     await GET(makeRequest({ code: 'valid-code', type: 'oauth' }))
 
     expect(mockTrackEvent).not.toHaveBeenCalled()
+  })
+
+  it('still treats a first Google sign-in as new when the timestamps differ by a couple seconds', async () => {
+    mockExchangeCodeForSession.mockResolvedValue({
+      data: { user: { id: 'user-1', created_at: '2026-09-02T00:00:00.000Z', last_sign_in_at: '2026-09-02T00:00:02.000Z' } },
+      error: null,
+    })
+
+    await GET(makeRequest({ code: 'valid-code', type: 'oauth' }))
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('user-1', null, 'account_created')
+  })
+
+  it('redirects with an honest cancelled message when Google returns access_denied', async () => {
+    const res = await GET(makeRequest({ error: 'access_denied' }))
+
+    expect(res.headers.get('location')).toBe('http://localhost/login?error=Google+sign-in+was+cancelled.')
+    expect(mockExchangeCodeForSession).not.toHaveBeenCalled()
+  })
+
+  it('redirects with a generic Google failure message for other OAuth errors', async () => {
+    const res = await GET(makeRequest({ error: 'server_error' }))
+
+    expect(res.headers.get('location')).toBe('http://localhost/login?error=Google+sign-in+failed.+Please+try+again.')
   })
 })

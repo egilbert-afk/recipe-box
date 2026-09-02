@@ -3,8 +3,8 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { trackEvent } from '@/lib/events'
 import { sanitizeInviteCode, sanitizeShareToken } from '@/lib/utils'
+import { buildAuthCallbackUrl } from '@/lib/auth-callback'
 import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
 
 export async function signIn(formData: FormData) {
   const email = formData.get('email') as string
@@ -29,11 +29,7 @@ export async function signInWithGoogle(formData: FormData) {
   const code = sanitizeInviteCode(formData.get('code') as string | null)
   const save = sanitizeShareToken(formData.get('save') as string | null)
 
-  const headersList = await headers()
-  const host = headersList.get('host') ?? 'localhost:3000'
-  const protocol = host.includes('localhost') ? 'http' : 'https'
-  const extraParam = code ? `&invite_code=${code}` : save ? `&save_token=${save}` : ''
-  const redirectTo = `${protocol}://${host}/auth/callback?type=oauth${extraParam}`
+  const redirectTo = await buildAuthCallbackUrl('oauth', code ? { invite_code: code } : save ? { save_token: save } : {})
 
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -70,14 +66,7 @@ export async function signUp(formData: FormData) {
     redirect(`/signup?error=Passwords+do+not+match${extraParam}`)
   }
 
-  const headersList = await headers()
-  const host = headersList.get('host') ?? 'localhost:3000'
-  const protocol = host.includes('localhost') ? 'http' : 'https'
-  const callbackUrl = code
-    ? `${protocol}://${host}/auth/callback?type=signup&invite_code=${code}`
-    : save
-      ? `${protocol}://${host}/auth/callback?type=signup&save_token=${save}`
-      : `${protocol}://${host}/auth/callback?type=signup`
+  const callbackUrl = await buildAuthCallbackUrl('signup', code ? { invite_code: code } : save ? { save_token: save } : {})
 
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: callbackUrl } })
@@ -115,10 +104,7 @@ export async function forgotPassword(formData: FormData) {
     redirect('/forgot-password?error=Email+is+required')
   }
 
-  const headersList = await headers()
-  const host = headersList.get('host') ?? 'localhost:3000'
-  const protocol = host.includes('localhost') ? 'http' : 'https'
-  const redirectTo = `${protocol}://${host}/auth/callback?type=recovery`
+  const redirectTo = await buildAuthCallbackUrl('recovery')
 
   const supabase = await createSupabaseServerClient()
   await supabase.auth.resetPasswordForEmail(email, { redirectTo })
