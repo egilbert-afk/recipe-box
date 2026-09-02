@@ -28,6 +28,8 @@ export type SupportedImageMimeType = 'image/jpeg' | 'image/png' | 'image/gif' | 
 
 const SYSTEM_PROMPT = `You are a recipe parser. Extract recipe data from the provided content and return ONLY a JSON object with no markdown, no explanation, no code fences.
 
+If the content does not contain an actual food recipe with specific ingredients and steps — for example a login page, paywall notice, generic site homepage, or navigation/marketing copy — respond with exactly this JSON and nothing else: {"not_a_recipe": true}. Do not invent or guess at a plausible-sounding recipe when one isn't actually present in the content.
+
 The JSON must have exactly these fields:
 {
   "title": string,
@@ -92,19 +94,67 @@ export async function fetchUrl(url: string): Promise<string> {
   return res.text()
 }
 
-// Strips HTML tags and collapses whitespace to reduce token count before
-// sending to Claude. Recipe sites have a lot of nav, ads, and boilerplate
-// that we don't need Claude to read.
-export function stripHtml(html: string): string {
-  return html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
+// Shared by stripHtml and extractMetaContent so the two extraction paths can't decode the
+// same entity differently depending on which one happened to touch it.
+function decodeHtmlEntities(text: string): string {
+  return text
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+}
+
+// Open Graph meta tags carry a page's title/description in an attribute, not in text between
+// tags — stripHtml (below) only keeps text between tags, so this content is otherwise silently
+// discarded. That matters most for pages like Instagram posts, where the caption is the entire
+// recipe and lives only in og:description; the rest of the initial HTML is an empty JS shell.
+// Meta tags are always in <head>, near the top of the document, so bounding the search to the
+// first 100k chars avoids scanning multi-MB pages (common on JS-heavy sites) for content that,
+// once found, is only ever a few hundred characters.
+const META_SEARCH_WINDOW = 100_000
+const MAX_META_CONTENT_LENGTH = 1000
+
+function extractMetaContent(html: string, property: string): string | null {
+  const searchable = html.slice(0, META_SEARCH_WINDOW)
+  const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  // \s (not just "content=" directly) before the content attribute so a decoy attribute whose
+  // name merely ends in "content=" — e.g. data-content="..." — can't win the greedy match.
+  // Match against whichever quote character actually delimits the content value (via
+  // backreference) rather than excluding both quote characters — a title like
+  // `content="Grandma's Pasta"` is valid HTML and must not be cut short at the apostrophe.
+  const propFirst = new RegExp(`<meta[^>]*(?:property|name)=["']${escaped}["'][^>]*\\scontent=(["'])(.*?)\\1`, 'i')
+  const contentFirst = new RegExp(`<meta[^>]*\\scontent=(["'])(.*?)\\1[^>]*(?:property|name)=["']${escaped}["']`, 'i')
+  const match = searchable.match(propFirst) ?? searchable.match(contentFirst)
+  const raw = match?.[2]
+  if (!raw) return null
+  const decoded = decodeHtmlEntities(raw).trim().slice(0, MAX_META_CONTENT_LENGTH)
+  return decoded || null
+}
+
+// Pulls og:title/og:description ahead of the stripped body text. Harmless on ordinary recipe
+// sites (their body text already has everything); load-bearing on sites where the body is a JS
+// shell and the only real content is in these tags.
+export function extractOpenGraphContext(html: string): string {
+  const title = extractMetaContent(html, 'og:title')
+  const description = extractMetaContent(html, 'og:description')
+  const parts: string[] = []
+  if (title) parts.push(`Page title: ${title}`)
+  if (description) parts.push(`Page description: ${description}`)
+  return parts.join('\n')
+}
+
+// Strips HTML tags and collapses whitespace to reduce token count before
+// sending to Claude. Recipe sites have a lot of nav, ads, and boilerplate
+// that we don't need Claude to read.
+export function stripHtml(html: string): string {
+  return decodeHtmlEntities(
+    html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+  )
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 20000) // Cap at 20k chars — enough for any recipe
@@ -208,13 +258,15 @@ function extractRecipeFromMessage(message: Anthropic.Message): CreateRecipeInput
 
 export async function parseRecipeFromUrl(url: string): Promise<CreateRecipeInput> {
   const html = await fetchUrl(url)
+  const ogContext = extractOpenGraphContext(html)
   const text = stripHtml(html)
+  const content = ogContext ? `${ogContext}\n\n${text}` : text
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: `Parse this recipe page into JSON:\n\n${text}` }],
+    messages: [{ role: 'user', content: `Parse this recipe page into JSON:\n\n${content}` }],
   })
 
   return { ...extractRecipeFromMessage(message), source_url: url }
