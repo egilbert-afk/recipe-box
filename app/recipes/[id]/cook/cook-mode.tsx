@@ -42,11 +42,24 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
   const [ingredientsOpen, setIngredientsOpen] = useState(false)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
 
-  // Microstep state — fetched from the API on mount, falls back to conventional steps on error
+  // Microstep state — fetched from the API on mount, falls back to conventional steps on error.
+  // microstepsError only ever applies to the initial load (it's what triggers the "(classic
+  // steps)" fallback label); a failed regenerate keeps showing the last-good microsteps and
+  // reports through regenerateError instead, so a regenerate failure can't be mistaken for
+  // "now showing classic steps" when it isn't.
   const [microsteps, setMicrosteps] = useState<string[] | null>(null)
   const [microstepsLoading, setMicrostepsLoading] = useState(true)
   const [microstepsError, setMicrostepsError] = useState('')
   const [regenerating, setRegenerating] = useState(false)
+  const [regenerateError, setRegenerateError] = useState('')
+  // Cooldown after a regenerate completes — each click is a paid Claude call, this just
+  // prevents rapid repeat-clicking rather than being a real server-side rate limit.
+  const [regenerateCooldown, setRegenerateCooldown] = useState(false)
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   // Voice state — only available when microsteps are loaded
   const [voiceEnabled, setVoiceEnabled] = useState(false)
@@ -69,58 +82,60 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
     }).catch(() => {})
   }, [recipeId])
 
-  useEffect(() => {
-    let cancelled = false
-    setMicrostepsLoading(true)
-    setMicrostepsError('')
-    fetch(`/api/recipes/${recipeId}/microsteps`, {
+  // Shared by the initial load and Regenerate — isStale() lets each caller decide when a
+  // response should no longer be applied (unmount, or the effect that kicked it off re-ran).
+  const loadMicrosteps = useCallback((regenerate: boolean, isStale: () => boolean) => {
+    if (regenerate) {
+      setRegenerating(true)
+      setRegenerateError('')
+    } else {
+      setMicrostepsLoading(true)
+      setMicrostepsError('')
+    }
+    return fetch(`/api/recipes/${recipeId}/microsteps`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ servings: targetServings }),
+      body: JSON.stringify(regenerate ? { servings: targetServings, regenerate: true } : { servings: targetServings }),
     })
       .then((res) => res.json())
       .then((data) => {
-        if (cancelled) return
+        if (isStale()) return
         if (Array.isArray(data.steps)) {
           setMicrosteps(data.steps)
         } else if (!data.gated) {
-          setMicrostepsError(data.error ?? 'Could not prepare microsteps')
+          const message = data.error ?? 'Could not prepare microsteps'
+          if (regenerate) setRegenerateError(message)
+          else setMicrostepsError(message)
         }
       })
       .catch(() => {
-        if (!cancelled) setMicrostepsError('Could not prepare microsteps')
+        if (isStale()) return
+        if (regenerate) setRegenerateError('Could not prepare microsteps')
+        else setMicrostepsError('Could not prepare microsteps')
       })
       .finally(() => {
-        if (!cancelled) setMicrostepsLoading(false)
+        if (isStale()) return
+        if (regenerate) {
+          setRegenerating(false)
+          setRegenerateCooldown(true)
+          setTimeout(() => { if (mountedRef.current) setRegenerateCooldown(false) }, 15000)
+        } else {
+          setMicrostepsLoading(false)
+        }
       })
-    return () => { cancelled = true }
   }, [recipeId, targetServings])
+
+  useEffect(() => {
+    let cancelled = false
+    loadMicrosteps(false, () => cancelled)
+    return () => { cancelled = true }
+  }, [loadMicrosteps])
 
   // Regenerate microsteps, bypassing the cache — recovers from stale cached results
   // after generation-quality improvements (see known issue on the Layer 5 cache)
   const regenerateMicrosteps = useCallback(() => {
-    setRegenerating(true)
-    setMicrostepsError('')
-    fetch(`/api/recipes/${recipeId}/microsteps`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ servings: targetServings, regenerate: true }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data.steps)) {
-          setMicrosteps(data.steps)
-        } else if (!data.gated) {
-          setMicrostepsError(data.error ?? 'Could not prepare microsteps')
-        }
-      })
-      .catch(() => {
-        setMicrostepsError('Could not prepare microsteps')
-      })
-      .finally(() => {
-        setRegenerating(false)
-      })
-  }, [recipeId, targetServings])
+    loadMicrosteps(true, () => !mountedRef.current)
+  }, [loadMicrosteps])
 
   useEffect(() => {
     if (!('wakeLock' in navigator)) return
@@ -255,12 +270,15 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
     }
   }, [speak])
 
-  // Speak the current step whenever it changes while voice is on
+  // Speak the current step whenever it changes while voice is on. Depends on the step text
+  // itself (not just the index) so a successful Regenerate re-speaks the new wording even
+  // when the user stayed on the same step index.
+  const currentStepText = activeSteps[clampedStep]
   useEffect(() => {
     if (!voiceEnabled || microstepsLoading || activeSteps.length === 0) return
-    speak(activeSteps[clampedStep] ?? '')
+    speak(currentStepText ?? '')
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clampedStep, voiceEnabled, microstepsLoading])
+  }, [clampedStep, voiceEnabled, microstepsLoading, currentStepText])
 
   // Cleanup TTS on unmount — recognition cleanup is handled by the recognition setup effect
   useEffect(() => {
@@ -408,14 +426,19 @@ export function CookMode({ title, recipeId, baseServings, targetServings, notes,
 
         {/* Regenerate — bypasses the cache when steps read stale after a quality improvement */}
         {microsteps && !microstepsLoading && (
-          <button
-            type="button"
-            onClick={regenerateMicrosteps}
-            disabled={regenerating}
-            className="w-full flex items-center justify-center h-10 text-sm font-medium text-gray-500 disabled:opacity-50"
-          >
-            {regenerating ? 'Regenerating…' : 'Regenerate steps'}
-          </button>
+          <div className="flex flex-col items-center gap-1">
+            <button
+              type="button"
+              onClick={regenerateMicrosteps}
+              disabled={regenerating || regenerateCooldown}
+              className="w-full flex items-center justify-center h-10 text-sm font-medium text-gray-500 disabled:opacity-50"
+            >
+              {regenerating ? 'Regenerating…' : 'Regenerate steps'}
+            </button>
+            {regenerateError && (
+              <p className="text-xs text-red-600 pb-2">{regenerateError} — try again in a moment.</p>
+            )}
+          </div>
         )}
       </div>
     </div>
